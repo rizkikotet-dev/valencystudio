@@ -1,0 +1,52 @@
+// Prisma schema for Roblox Audio Converter & Uploader
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model RobloxAccount {
+  id        String   @id @default(cuid())
+  name      String
+  cookie    String
+  csrfToken String?
+  userId    String?
+  username  String?
+  avatarUrl String?
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  uploads   AudioUpload[]
+}
+
+model AudioUpload {
+  id            String   @id @default(cuid())
+  sourceType    String   // "youtube" | "soundcloud" | "file"
+  sourceUrl     String?
+  sourceTitle   String?
+  assetName     String
+  description   String?
+  originalFile  String
+  processedFile String?
+  duration      Float    @default(0)
+  fileSize      Int      @default(0)
+  // Processing parameters
+  speed         Float    @default(1.0)
+  pitch         Float    @default(0)
+  amplification Float    @default(0)
+  bassBoost     Float    @default(0)
+  reverb        Float    @default(0)
+  bypassMode    String?  // "pitch" | "speed" | "pitch_speed" | "bass" | "custom"
+  // Roblox upload
+  robloxAssetId String?
+  uploadStatus  String   @default("pending") // "pending" | "processing" | "uploaded" | "failed"
+  uploadError   String?
+  accountId     String?
+  account       RobloxAccount? @relation(fields: [accountId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
