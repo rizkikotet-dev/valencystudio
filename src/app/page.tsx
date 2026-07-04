@@ -175,7 +175,7 @@ export default function Home() {
             {[
               { n: "1", icon: Music4, title: "Pilih Sumber", desc: "Tempelkan link YouTube/SoundCloud atau upload file audio lokal.", color: "text-red-500" },
               { n: "2", icon: Zap, title: "Proses & Bypass", desc: "Pilih preset bypass atau sesuaikan pitch, speed, bass, & reverb manual.", color: "text-orange-500" },
-              { n: "3", icon: UploadCloud, title: "Upload Roblox", desc: "Verifikasi dengan cookie, beri nama aset, lalu upload langsung ke akun.", color: "text-emerald-500" },
+              { n: "3", icon: UploadCloud, title: "Upload Roblox", desc: "Verifikasi dengan API Key Open Cloud, beri nama aset, lalu upload langsung ke akun/grup.", color: "text-emerald-500" },
             ].map((s) => {
               const Icon = s.icon;
               return (
@@ -219,8 +219,8 @@ export default function Home() {
             <p className="font-semibold">⚠️ Catatan Penting</p>
             <p className="mt-1 text-amber-600/90 dark:text-amber-400/80">
               Gunakan untuk konten yang Anda miliki haknya atau yang berlisensi bebas royalti. Bypass deteksi
-              hak cipta dapat melanggar ketentuan Roblox & hukum hak cipta. Cookie .ROBLOSECURITY hanya disimpan
-              di sesi browser Anda dan tidak dikirim ke server pihak ketiga.
+              hak cipta dapat melanggar ketentuan Roblox & hukum hak cipta. API Key Roblox Open Cloud hanya
+              disimpan di sesi browser Anda dan hanya digunakan untuk upload — tidak dikirim ke server pihak ketiga.
             </p>
           </div>
         </section>

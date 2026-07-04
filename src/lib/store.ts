@@ -33,12 +33,12 @@ export interface ProcessedInfo {
 
 export interface RobloxAccount {
   id: string;
+  apiKey: string;
+  userId: string;
   username: string;
   displayName: string;
   avatarUrl?: string;
-  cookie: string;
-  csrfToken?: string;
-  userId?: string;
+  groupId?: string;
 }
 
 export type BypassPreset = {

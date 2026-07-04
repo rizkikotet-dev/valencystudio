@@ -12,11 +12,12 @@ datasource db {
 model RobloxAccount {
   id        String   @id @default(cuid())
   name      String
-  cookie    String
-  csrfToken String?
-  userId    String?
+  apiKey    String
+  userId    String
   username  String?
+  displayName String?
   avatarUrl String?
+  groupId   String?
   verified  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

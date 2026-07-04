@@ -3,24 +3,27 @@ import { uploadAudioToRoblox } from "@/lib/roblox-api";
 import { readAudioFile } from "@/lib/audio-processor";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+export const maxDuration = 180;
 
 /** POST /api/roblox/upload
  * Body: {
- *   cookie: string,
- *   csrfToken?: string,
+ *   apiKey: string,
+ *   userId: number,
+ *   groupId?: number,
  *   fileName: string,        // processed file name in processed dir
  *   assetName: string,
  *   description?: string,
- *   groupId?: number,
  * }
+ * Uploads the processed audio to Roblox via Open Cloud Assets API and polls
+ * the operation until the assetId is available.
  */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { cookie, csrfToken, fileName, assetName, description, groupId } = body;
+    const { apiKey, userId, groupId, fileName, assetName, description } = body;
 
-    if (!cookie) return NextResponse.json({ ok: false, error: "Cookie Roblox wajib diisi" }, { status: 400 });
+    if (!apiKey) return NextResponse.json({ ok: false, error: "API Key wajib diisi" }, { status: 400 });
+    if (!userId) return NextResponse.json({ ok: false, error: "User ID wajib diisi" }, { status: 400 });
     if (!fileName) return NextResponse.json({ ok: false, error: "fileName wajib diisi" }, { status: 400 });
     if (!assetName) return NextResponse.json({ ok: false, error: "assetName wajib diisi" }, { status: 400 });
 
@@ -30,12 +33,13 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await uploadAudioToRoblox({
-      cookie: cookie.trim(),
-      csrfToken,
+      apiKey: apiKey.trim(),
       audioBuffer: buf,
+      fileName: fileName.endsWith(".mp3") ? fileName : `${fileName}.mp3`,
       assetName,
       description,
-      groupId,
+      userId: Number(userId),
+      groupId: groupId ? Number(groupId) : undefined,
     });
 
     return NextResponse.json(result, { status: result.ok ? 200 : 400 });
