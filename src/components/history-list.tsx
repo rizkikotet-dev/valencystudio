@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { History, Trash2, ExternalLink, Youtube, CloudUpload, FileAudio, Loader2 } from "lucide-react";
+import { History, Trash2, ExternalLink, Youtube, CloudUpload, FileAudio, Loader2, CheckCircle2, XCircle, Clock, RefreshCw } from "lucide-react";
 import { useConverter } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,8 @@ interface HistoryItem {
   robloxAssetId: string | null;
   uploadStatus: string;
   uploadError: string | null;
+  moderationStatus: string | null;
+  moderationReason: string | null;
   createdAt: string;
 }
 
@@ -118,6 +120,7 @@ export function HistoryList() {
               const Icon = SOURCE_ICON[item.sourceType] || FileAudio;
               const isUploaded = item.uploadStatus === "uploaded";
               const isFailed = item.uploadStatus === "failed";
+              const modCfg = getModBadge(item.moderationStatus);
               return (
                 <div
                   key={item.id}
@@ -128,11 +131,17 @@ export function HistoryList() {
                       <Icon className="h-3.5 w-3.5 text-primary" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <p className="truncate text-xs font-semibold">{item.assetName}</p>
-                        {isUploaded && (
+                        {isUploaded && !item.moderationStatus && (
                           <Badge variant="outline" className="h-4 gap-0.5 px-1 text-[9px] text-emerald-500">
                             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Sukses
+                          </Badge>
+                        )}
+                        {isUploaded && item.moderationStatus && (
+                          <Badge variant="outline" className={cn("h-4 gap-0.5 px-1 text-[9px]", modCfg.className)}>
+                            <modCfg.icon className={cn("h-2.5 w-2.5", item.moderationStatus === "Reviewing" && "animate-spin")} />
+                            {modCfg.label}
                           </Badge>
                         )}
                         {isFailed && (
@@ -188,4 +197,19 @@ export function HistoryList() {
       )}
     </div>
   );
+}
+
+function getModBadge(status: string | null): { icon: React.ElementType; label: string; className: string } {
+  switch (status) {
+    case "Approved":
+      return { icon: CheckCircle2, label: "Disetujui", className: "text-emerald-500 border-emerald-500/30" };
+    case "Rejected":
+      return { icon: XCircle, label: "Ditolak", className: "text-destructive border-destructive/30" };
+    case "Reviewing":
+      return { icon: RefreshCw, label: "Direview", className: "text-blue-500 border-blue-500/30" };
+    case "Pending":
+      return { icon: Clock, label: "Menunggu", className: "text-amber-500 border-amber-500/30" };
+    default:
+      return { icon: CheckCircle2, label: "Sukses", className: "text-emerald-500" };
+  }
 }

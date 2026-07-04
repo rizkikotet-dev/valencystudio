@@ -1,21 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { uploadAudioToRoblox } from "@/lib/roblox-api";
+import { createAudioAsset } from "@/lib/roblox-api";
 import { readAudioFile } from "@/lib/audio-processor";
 
 export const runtime = "nodejs";
-export const maxDuration = 180;
+export const maxDuration = 60;
 
 /** POST /api/roblox/upload
- * Body: {
- *   apiKey: string,
- *   userId: number,
- *   groupId?: number,
- *   fileName: string,        // processed file name in processed dir
- *   assetName: string,
- *   description?: string,
- * }
- * Uploads the processed audio to Roblox via Open Cloud Assets API and polls
- * the operation until the assetId is available.
+ * Body: { apiKey, userId, groupId?, fileName, assetName, description? }
+ * Creates the asset via Open Cloud API and returns immediately with operationId
+ * (or assetId if completed synchronously). The frontend polls /api/roblox/status
+ * for operation completion and moderation status.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -32,7 +26,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "File audio yang diproses tidak ditemukan. Proses ulang audio terlebih dahulu." }, { status: 404 });
     }
 
-    const result = await uploadAudioToRoblox({
+    const result = await createAudioAsset({
       apiKey: apiKey.trim(),
       audioBuffer: buf,
       fileName: fileName.endsWith(".mp3") ? fileName : `${fileName}.mp3`,

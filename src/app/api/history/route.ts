@@ -41,10 +41,34 @@ export async function POST(req: NextRequest) {
         robloxAssetId: body.robloxAssetId || null,
         uploadStatus: body.uploadStatus || "pending",
         uploadError: body.uploadError || null,
+        moderationStatus: body.moderationStatus || null,
+        moderationReason: body.moderationReason || null,
         accountId: body.accountId || null,
       },
     });
     return NextResponse.json({ ok: true, item: created });
+  } catch (e) {
+    return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 500 });
+  }
+}
+
+/** PATCH /api/history?id=xxx — update moderation status of a record */
+export async function PATCH(req: NextRequest) {
+  try {
+    const url = new URL(req.url);
+    const id = url.searchParams.get("id");
+    if (!id) return NextResponse.json({ ok: false, error: "id wajib diisi" }, { status: 400 });
+    const body = await req.json();
+    const updated = await db.audioUpload.update({
+      where: { id },
+      data: {
+        moderationStatus: body.moderationStatus || null,
+        moderationReason: body.moderationReason || null,
+        uploadStatus: body.uploadStatus || undefined,
+        robloxAssetId: body.robloxAssetId || undefined,
+      },
+    });
+    return NextResponse.json({ ok: true, item: updated });
   } catch (e) {
     return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 500 });
   }

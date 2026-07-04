@@ -1,18 +1,14 @@
 /**
  * Roblox Open Cloud API helpers (server-side only).
  *
- * Uses API Key authentication via the `x-api-key` header, as documented at
- * https://create.roblox.com/docs/cloud/auth/api-keys
+ * Uses API Key authentication via the `x-api-key` header.
  *
- * Asset upload flow (Assets API v1):
- *  1. POST https://apis.roblox.com/assets/v1/assets
- *       - multipart/form-data with `request` (JSON) + `fileContent` (binary)
- *       - returns an Operation object: { path: "operations/<opId>" }
- *  2. Poll GET https://apis.roblox.com/assets/v1/operations/<opId>
- *       - returns { path, done: boolean, response?: { assetId, ... } }
- *  3. When done === true, read response.assetId.
+ * Upload flow (split into phases to avoid long-running requests):
+ *  1. createAudioAsset() → POST /assets/v1/assets → returns { path: "operations/<opId>" }
+ *  2. getOperationStatus() → GET /assets/v1/operations/<opId> → returns { done, response?: { assetId } }
+ *  3. getAssetModerationStatus() → GET /assets/v1/assets/<assetId> → returns { moderationResult: { state } }
  *
- * Audio asset restrictions: .mp3/.ogg/.wav/.flac, up to 7 min, up to 20 MB.
+ * Moderation states: "Pending" | "Reviewing" | "Approved" | "Rejected"
  */
 
 export interface RobloxUser {
@@ -30,20 +26,32 @@ export interface RobloxVerifyResult {
   error?: string;
 }
 
-export interface RobloxUploadParams {
+export interface RobloxCreateParams {
   apiKey: string;
   audioBuffer: Buffer;
-  fileName: string; // e.g. "song.mp3"
+  fileName: string;
   assetName: string;
   description?: string;
-  userId: number; // creator user id (required)
-  groupId?: number; // optional group creator
+  userId: number;
+  groupId?: number;
 }
 
-export interface RobloxUploadResult {
+export interface RobloxCreateResult {
   ok: boolean;
-  assetId?: string;
   operationId?: string;
+  assetId?: string; // present if operation completed synchronously
+  error?: string;
+}
+
+export type ModerationState = "Pending" | "Reviewing" | "Approved" | "Rejected" | "Unknown";
+
+export interface RobloxStatusResult {
+  ok: boolean;
+  phase: "operation" | "moderation";
+  operationDone?: boolean;
+  assetId?: string;
+  moderationState?: ModerationState;
+  moderationReason?: string;
   error?: string;
 }
 
@@ -75,28 +83,20 @@ async function fetchRobloxUser(userId: number): Promise<RobloxUser | null> {
   }
 }
 
-/** Verify the API key by making a lightweight call to the operations endpoint.
- *  - 401/403 → key invalid
- *  - 404 → key valid (operation not found, which is expected for a dummy id)
- *  - 200 → key valid
- */
+/** Verify the API key by making a lightweight call to the operations endpoint. */
 async function verifyApiKey(apiKey: string): Promise<boolean> {
   try {
     const res = await fetch(`https://apis.roblox.com/assets/v1/operations/verify-${Date.now()}`, {
       headers: { "x-api-key": apiKey },
     });
-    // 401/403 means the key is invalid or unauthorized
     if (res.status === 401 || res.status === 403) return false;
-    // Any other status (404, 400) means the key was accepted by the gateway
     return true;
   } catch {
     return false;
   }
 }
 
-/** Verify an API Key + Roblox userId combination.
- *  Returns the public user profile and whether the API key is accepted.
- */
+/** Verify an API Key + Roblox userId combination. */
 export async function verifyRobloxApiKey(
   apiKey: string,
   userId: number,
@@ -121,17 +121,26 @@ export async function verifyRobloxApiKey(
   return { ok: true, user, apiKeyValid: true };
 }
 
-/** Create an audio asset via the Open Cloud Assets API.
- *  Returns the new assetId by polling the long-running operation.
- */
-export async function uploadAudioToRoblox(params: RobloxUploadParams): Promise<RobloxUploadResult> {
+/** Safely parse JSON from a Response, returning null on failure */
+async function safeJson(res: Response): Promise<any> {
+  try {
+    const text = await res.text();
+    if (!text || text.trim().startsWith("<") || text.trim().startsWith("<!")) return null;
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+/** Phase 1: Create an audio asset via the Open Cloud Assets API.
+ *  Returns the operationId for polling (or assetId if completed synchronously). */
+export async function createAudioAsset(params: RobloxCreateParams): Promise<RobloxCreateResult> {
   const { apiKey, audioBuffer, fileName, assetName, description = "", userId, groupId } = params;
 
   if (!apiKey) return { ok: false, error: "API Key wajib diisi" };
   if (!userId) return { ok: false, error: "User ID wajib diisi" };
   if (!audioBuffer || audioBuffer.length === 0) return { ok: false, error: "Audio buffer kosong" };
 
-  // 1) Build the multipart form data manually (to control content-type of file part)
   const boundary = `----robloxaudio${Date.now()}${Math.random().toString(36).slice(2)}`;
   const requestPayload = {
     assetType: "Audio",
@@ -151,7 +160,6 @@ export async function uploadAudioToRoblox(params: RobloxUploadParams): Promise<R
     : "audio/mpeg";
 
   const parts: Buffer[] = [];
-  // request part
   parts.push(
     Buffer.from(
       `--${boundary}\r\n` +
@@ -160,7 +168,6 @@ export async function uploadAudioToRoblox(params: RobloxUploadParams): Promise<R
         `${JSON.stringify(requestPayload)}\r\n`,
     ),
   );
-  // fileContent part
   parts.push(
     Buffer.from(
       `--${boundary}\r\n` +
@@ -173,7 +180,6 @@ export async function uploadAudioToRoblox(params: RobloxUploadParams): Promise<R
 
   const body = Buffer.concat(parts);
 
-  // 2) POST to create asset endpoint
   let createRes: Response;
   try {
     createRes = await fetch("https://apis.roblox.com/assets/v1/assets", {
@@ -190,8 +196,9 @@ export async function uploadAudioToRoblox(params: RobloxUploadParams): Promise<R
   }
 
   if (createRes.status === 401 || createRes.status === 403) {
-    const errText = await safeText(createRes);
-    return { ok: false, error: `API Key tidak valid atau tidak punya permission assets:write. (${errText.slice(0, 200)})` };
+    const errJson = await safeJson(createRes);
+    const msg = errJson?.message || errJson?.error || "API Key tidak valid atau tidak punya permission assets:write";
+    return { ok: false, error: msg };
   }
   if (createRes.status === 429) {
     return { ok: false, error: "Rate limit tercapai (429). Coba lagi beberapa menit lagi." };
@@ -199,66 +206,125 @@ export async function uploadAudioToRoblox(params: RobloxUploadParams): Promise<R
 
   const createJson = await safeJson(createRes);
   if (!createRes.ok) {
-    const msg = createJson?.message || createJson?.error || (await safeText(createRes)).slice(0, 300);
-    return { ok: false, error: `Roblox API error ${createRes.status}: ${msg}` };
+    const msg = createJson?.message || createJson?.error || `HTTP ${createRes.status}`;
+    return { ok: false, error: `Roblox API error: ${msg}` };
   }
 
-  // Operation path is like "operations/abc-123-def"
-  const opPath: string | undefined = createJson.path;
+  // Check if operation completed synchronously (some responses include the asset directly)
+  if (createJson?.response?.assetId) {
+    return { ok: true, assetId: String(createJson.response.assetId) };
+  }
+  if (createJson?.assetId) {
+    return { ok: true, assetId: String(createJson.assetId) };
+  }
+
+  // Otherwise, extract the operation ID for polling
+  const opPath: string | undefined = createJson?.path;
   if (!opPath) {
-    // Some responses return the asset directly when done synchronously
-    const directAssetId = createJson.response?.assetId || createJson.assetId;
-    if (directAssetId) return { ok: true, assetId: String(directAssetId) };
     return { ok: false, error: `Respon tidak terduga dari Roblox: ${JSON.stringify(createJson).slice(0, 300)}` };
   }
 
   const operationId = opPath.startsWith("operations/") ? opPath.slice("operations/".length) : opPath;
+  return { ok: true, operationId };
+}
 
-  // 3) Poll the operation until done (max ~60s)
-  const maxAttempts = 40;
-  const pollIntervalMs = 1500;
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    await sleep(pollIntervalMs);
-    try {
-      const pollRes = await fetch(`https://apis.roblox.com/assets/v1/operations/${operationId}`, {
-        headers: { "x-api-key": apiKey },
-      });
-      if (pollRes.status === 401 || pollRes.status === 403) {
-        return { ok: false, error: "API Key tidak valid saat polling operation.", operationId };
-      }
-      if (!pollRes.ok) continue;
-      const pollJson = await pollRes.json();
-      if (pollJson.done === true) {
-        const assetId = pollJson.response?.assetId;
-        if (assetId) {
-          return { ok: true, assetId: String(assetId), operationId };
-        }
-        // Operation finished but no assetId — likely an error
-        const errMsg = pollJson.response?.error?.message || pollJson.error?.message || "Operation selesai tanpa assetId";
-        return { ok: false, error: errMsg, operationId };
-      }
-      // still processing, continue polling
-    } catch {
-      // network blip, keep polling
+/** Phase 2: Check the status of a create/update operation.
+ *  Returns { operationDone, assetId } — when done, assetId is the new asset's ID. */
+export async function getOperationStatus(
+  apiKey: string,
+  operationId: string,
+): Promise<RobloxStatusResult> {
+  try {
+    const res = await fetch(`https://apis.roblox.com/assets/v1/operations/${operationId}`, {
+      headers: { "x-api-key": apiKey },
+    });
+
+    if (res.status === 401 || res.status === 403) {
+      return { ok: false, phase: "operation", error: "API Key tidak valid" };
     }
+    if (res.status === 404) {
+      return { ok: false, phase: "operation", error: "Operation tidak ditemukan" };
+    }
+    if (!res.ok) {
+      return { ok: false, phase: "operation", error: `HTTP ${res.status}` };
+    }
+
+    const json = await safeJson(res);
+    if (!json) {
+      return { ok: false, phase: "operation", error: "Respon tidak valid dari Roblox" };
+    }
+
+    if (json.done === true) {
+      const assetId = json.response?.assetId;
+      if (assetId) {
+        return { ok: true, phase: "operation", operationDone: true, assetId: String(assetId) };
+      }
+      // Operation done but no assetId — likely an error
+      const errMsg = json.response?.error?.message || json.error?.message || "Operation gagal tanpa detail";
+      return { ok: false, phase: "operation", operationDone: true, error: errMsg };
+    }
+
+    // Still processing
+    return { ok: true, phase: "operation", operationDone: false };
+  } catch (e) {
+    return { ok: false, phase: "operation", error: (e as Error).message };
   }
-  return { ok: false, error: "Timeout: operation belum selesai setelah 60 detik. Cek riwayat upload di Roblox Creator.", operationId };
 }
 
-async function safeJson(res: Response): Promise<any> {
+/** Phase 3: Check the moderation status of an uploaded asset.
+ *  Returns the moderation state: Pending | Reviewing | Approved | Rejected */
+export async function getAssetModerationStatus(
+  apiKey: string,
+  assetId: string,
+): Promise<RobloxStatusResult> {
   try {
-    return await res.json();
-  } catch {
-    return null;
+    const res = await fetch(`https://apis.roblox.com/assets/v1/assets/${assetId}`, {
+      headers: { "x-api-key": apiKey },
+    });
+
+    if (res.status === 401 || res.status === 403) {
+      return { ok: false, phase: "moderation", error: "API Key tidak valid" };
+    }
+    if (res.status === 404) {
+      // Asset might not be indexed yet — treat as pending
+      return { ok: true, phase: "moderation", moderationState: "Pending" };
+    }
+    if (!res.ok) {
+      return { ok: false, phase: "moderation", error: `HTTP ${res.status}` };
+    }
+
+    const json = await safeJson(res);
+    if (!json) {
+      return { ok: false, phase: "moderation", error: "Respon tidak valid dari Roblox" };
+    }
+
+    // The moderation result can be in different fields depending on API version
+    const mod = json.moderationResult || json.moderation || {};
+    const state = (mod.state || mod.status || json.moderationState || json.status || "Unknown") as ModerationState;
+
+    // Normalize known states
+    const normalizedState = normalizeModerationState(String(state));
+    const reason = mod.reason || mod.rejectionReason || json.rejectionReason || undefined;
+
+    return {
+      ok: true,
+      phase: "moderation",
+      assetId,
+      moderationState: normalizedState,
+      moderationReason: reason,
+    };
+  } catch (e) {
+    return { ok: false, phase: "moderation", error: (e as Error).message };
   }
 }
 
-async function safeText(res: Response): Promise<string> {
-  try {
-    return await res.text();
-  } catch {
-    return "";
-  }
+function normalizeModerationState(raw: string): ModerationState {
+  const s = raw.toLowerCase();
+  if (s.includes("pend")) return "Pending";
+  if (s.includes("review")) return "Reviewing";
+  if (s.includes("approv") || s.includes("pass")) return "Approved";
+  if (s.includes("reject") || s.includes("denied") || s.includes("block")) return "Rejected";
+  return "Unknown";
 }
 
 function sleep(ms: number) {

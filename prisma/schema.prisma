@@ -46,6 +46,8 @@ model AudioUpload {
   robloxAssetId String?
   uploadStatus  String   @default("pending") // "pending" | "processing" | "uploaded" | "failed"
   uploadError   String?
+  moderationStatus String? // "Pending" | "Reviewing" | "Approved" | "Rejected"
+  moderationReason String?
   accountId     String?
   account       RobloxAccount? @relation(fields: [accountId], references: [id])
   createdAt     DateTime @default(now())

@@ -143,6 +143,10 @@ interface ConverterState {
   uploadProgress: number;
   uploadError: string | null;
   uploadResult: { assetId: string } | null;
+  // Moderation status (real-time polling after upload)
+  moderationState: "Pending" | "Reviewing" | "Approved" | "Rejected" | "Unknown" | null;
+  moderationReason: string | null;
+  moderationPolling: boolean;
 
   // History refresh trigger
   historyVersion: number;
@@ -164,6 +168,9 @@ interface ConverterState {
   setUploadProgress: (n: number) => void;
   setUploadError: (e: string | null) => void;
   setUploadResult: (r: { assetId: string } | null) => void;
+  setModerationState: (s: ConverterState["moderationState"]) => void;
+  setModerationReason: (r: string | null) => void;
+  setModerationPolling: (b: boolean) => void;
   resetProcessed: () => void;
   refreshHistory: () => void;
   resetAll: () => void;
@@ -197,6 +204,9 @@ export const useConverter = create<ConverterState>((set) => ({
   uploadProgress: 0,
   uploadError: null,
   uploadResult: null,
+  moderationState: null,
+  moderationReason: null,
+  moderationPolling: false,
   historyVersion: 0,
 
   setSource: (s) => set({ source: s, processed: null, processError: null }),
@@ -236,7 +246,10 @@ export const useConverter = create<ConverterState>((set) => ({
   setUploadProgress: (n) => set({ uploadProgress: n }),
   setUploadError: (e) => set({ uploadError: e }),
   setUploadResult: (r) => set({ uploadResult: r }),
-  resetProcessed: () => set({ processed: null, processError: null, uploadResult: null, uploadError: null, uploadProgress: 0 }),
+  setModerationState: (s) => set({ moderationState: s }),
+  setModerationReason: (r) => set({ moderationReason: r }),
+  setModerationPolling: (b) => set({ moderationPolling: b }),
+  resetProcessed: () => set({ processed: null, processError: null, uploadResult: null, uploadError: null, uploadProgress: 0, moderationState: null, moderationReason: null, moderationPolling: false }),
   refreshHistory: () => set((s) => ({ historyVersion: s.historyVersion + 1 })),
   resetAll: () =>
     set({
@@ -249,5 +262,8 @@ export const useConverter = create<ConverterState>((set) => ({
       uploadResult: null,
       uploadError: null,
       uploadProgress: 0,
+      moderationState: null,
+      moderationReason: null,
+      moderationPolling: false,
     }),
 }));
