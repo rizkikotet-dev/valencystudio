@@ -1,10 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { Youtube, CloudUpload, Upload, Loader2, Link2, FileAudio, X } from "lucide-react";
+import {
+  Youtube, CloudUpload, Upload, Loader2, Link2, FileAudio, X,
+  Settings2, ChevronDown, FileText, ExternalLink, AlertCircle,
+} from "lucide-react";
 import { useConverter, type SourceType } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -29,11 +35,12 @@ function fmtDur(s: number) {
 }
 
 export function SourceInput() {
-  const { source, sourceLoading, sourceError, setSource, setSourceLoading, setSourceError, resetAll } = useConverter();
+  const { source, sourceLoading, sourceError, cookies, setCookies, setSource, setSourceLoading, setSourceError, resetAll } = useConverter();
   const [active, setActive] = React.useState<SourceType>("youtube");
   const [url, setUrl] = React.useState("");
   const [dragOver, setDragOver] = React.useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [showAdvanced, setShowAdvanced] = React.useState(false);
+  const cookieFileRef = React.useRef<HTMLInputElement>(null);
 
   const handleUrlSubmit = async () => {
     if (!url.trim()) {
@@ -46,7 +53,7 @@ export function SourceInput() {
       const res = await fetch("/api/audio/extract", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: url.trim() }),
+        body: JSON.stringify({ url: url.trim(), cookies: cookies.trim() || undefined }),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || "Gagal mengekstrak audio");
@@ -102,6 +109,23 @@ export function SourceInput() {
     if (f) handleFile(f);
   };
 
+  const handleCookieFile = async (file: File) => {
+    try {
+      const text = await file.text();
+      setCookies(text);
+      toast.success("Cookies dimuat", { description: `${file.name} (${text.length} karakter)` });
+    } catch (e) {
+      toast.error("Gagal membaca file cookies");
+    }
+  };
+
+  // Auto-show advanced section if the last error was a bot-check
+  React.useEffect(() => {
+    if (sourceError && /bot|cookies|sign in/i.test(sourceError)) {
+      setShowAdvanced(true);
+    }
+  }, [sourceError]);
+
   return (
     <div className="space-y-4">
       {/* Source type tabs */}
@@ -137,25 +161,113 @@ export function SourceInput() {
 
       {/* Input area */}
       {active !== "file" ? (
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Link2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleUrlSubmit()}
-              placeholder={
-                active === "youtube"
-                  ? "https://www.youtube.com/watch?v=..."
-                  : "https://soundcloud.com/..."
-              }
-              className="h-11 pl-9"
-              disabled={sourceLoading}
-            />
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Link2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleUrlSubmit()}
+                placeholder={
+                  active === "youtube"
+                    ? "https://www.youtube.com/watch?v=..."
+                    : "https://soundcloud.com/..."
+                }
+                className="h-11 pl-9"
+                disabled={sourceLoading}
+              />
+            </div>
+            <Button onClick={handleUrlSubmit} disabled={sourceLoading || !url.trim()} className="h-11 px-5">
+              {sourceLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Ekstrak"}
+            </Button>
           </div>
-          <Button onClick={handleUrlSubmit} disabled={sourceLoading || !url.trim()} className="h-11 px-5">
-            {sourceLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Ekstrak"}
-          </Button>
+
+          {/* Advanced: YouTube cookies */}
+          {active === "youtube" && (
+            <div className="rounded-lg border border-border/60 bg-muted/20">
+              <button
+                type="button"
+                onClick={() => setShowAdvanced((s) => !s)}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <Settings2 className="h-3.5 w-3.5" />
+                Opsi Lanjutan (Cookies YouTube)
+                {cookies.trim() && (
+                  <Badge variant="secondary" className="ml-1 gap-1 text-[9px]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Cookies aktif
+                  </Badge>
+                )}
+                <ChevronDown className={cn("ml-auto h-3.5 w-3.5 transition-transform", showAdvanced && "rotate-180")} />
+              </button>
+              {showAdvanced && (
+                <div className="space-y-2 border-t px-3 py-3">
+                  <div className="flex items-start gap-2 rounded-md bg-amber-500/10 p-2 text-[11px] text-amber-700 dark:text-amber-400">
+                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    <div className="space-y-1">
+                      <p>
+                        YouTube kadang meminta login untuk memverifikasi bahwa Anda bukan bot. Untuk
+                        melewati verifikasi ini, ekspor cookies YouTube Anda dan tempel/diunggah di sini.
+                      </p>
+                      <p className="flex flex-wrap items-center gap-1">
+                        Cara ekspor cookies:
+                        <a
+                          href="https://chromewebstore.google.com/detail/get-cookiestxt-locally"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-0.5 font-medium text-primary hover:underline"
+                        >
+                          ekstensi "Get cookies.txt" <ExternalLink className="h-3 w-3" />
+                        </a>
+                        lalu buka youtube.com yang sudah login → klik ekstensi → export.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label className="flex items-center gap-1.5 text-[11px]">
+                        <FileText className="h-3 w-3" /> Konten cookies.txt (Netscape / header / JSON)
+                      </Label>
+                      <button
+                        type="button"
+                        onClick={() => cookieFileRef.current?.click()}
+                        className="inline-flex items-center gap-1 text-[10px] font-medium text-primary hover:underline"
+                      >
+                        <Upload className="h-3 w-3" /> Unggah file
+                      </button>
+                      <input
+                        ref={cookieFileRef}
+                        type="file"
+                        accept=".txt,.json,text/plain,application/json"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handleCookieFile(f);
+                          e.target.value = "";
+                        }}
+                      />
+                    </div>
+                    <Textarea
+                      value={cookies}
+                      onChange={(e) => setCookies(e.target.value)}
+                      placeholder={"# Netscape HTTP Cookie File\n.youtube.com\tTRUE\t/\tTRUE\t0\tVISITOR_INFO1...\tvalue..."}
+                      className="h-20 resize-none font-mono text-[10px] leading-relaxed"
+                      spellCheck={false}
+                    />
+                    {cookies.trim() && (
+                      <button
+                        type="button"
+                        onClick={() => setCookies("")}
+                        className="text-[10px] text-muted-foreground hover:text-destructive"
+                      >
+                        Hapus cookies
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       ) : (
         <div

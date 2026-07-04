@@ -122,6 +122,9 @@ interface ConverterState {
   source: SourceInfo | null;
   sourceLoading: boolean;
   sourceError: string | null;
+  // Optional yt-dlp cookies (Netscape cookies.txt) for YouTube bot-check bypass
+  cookies: string;
+  setCookies: (c: string) => void;
 
   // Settings
   settings: ProcessSettings;
@@ -180,6 +183,8 @@ export const useConverter = create<ConverterState>((set) => ({
   source: null,
   sourceLoading: false,
   sourceError: null,
+  cookies: "",
+  setCookies: (c) => set({ cookies: c }),
   settings: { ...DEFAULT_SETTINGS },
   activePresetId: "none",
   processed: null,

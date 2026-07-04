@@ -155,11 +155,32 @@ async function getWaveform(file: string, samples = 120): Promise<number[]> {
   }
 }
 
-/** Extract audio from YouTube/SoundCloud URL using yt-dlp */
-export async function extractAudioFromUrl(mediaUrl: string): Promise<ExtractResult> {
+/** Extract audio from YouTube/SoundCloud URL using yt-dlp.
+ *  Optionally accept a Netscape cookies.txt string to bypass YouTube's
+ *  "Sign in to confirm you're not a bot" challenge.
+ */
+export async function extractAudioFromUrl(mediaUrl: string, cookies?: string): Promise<ExtractResult> {
+  // Write cookies to a temp file if provided
+  let cookieFile: string | null = null;
+  if (cookies && cookies.trim()) {
+    const normalized = normalizeCookies(cookies.trim());
+    if (normalized) {
+      cookieFile = join(UPLOAD_DIR, `.cookies_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.txt`);
+      writeFileSync(cookieFile, normalized, { mode: 0o600 });
+    }
+  }
+
+  const cleanupCookie = () => {
+    if (cookieFile && existsSync(cookieFile)) {
+      try { unlinkSync(cookieFile); } catch {}
+    }
+  };
+
   try {
     const id = `src_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const outPattern = join(UPLOAD_DIR, `${id}.%(ext)s`);
+
+    const cookieArgs = cookieFile ? ["--cookies", cookieFile] : [];
 
     // First, get metadata
     let title = "Audio Tidak Berjudul";
@@ -168,22 +189,46 @@ export async function extractAudioFromUrl(mediaUrl: string): Promise<ExtractResu
     let thumbnail = "";
     try {
       const { stdout } = await execFileAsync(YTDLP, [
-        "--no-playlist", "--no-warnings", "-J", mediaUrl,
-      ], { maxBuffer: 30 * 1024 * 1024 });
+        "--no-playlist", "--no-warnings", "-J", ...cookieArgs, mediaUrl,
+      ], { maxBuffer: 30 * 1024 * 1024, timeout: 60000 });
       const meta = JSON.parse(stdout);
       title = meta.title || title;
       duration = meta.duration || 0;
       uploader = meta.uploader || meta.channel || "";
       thumbnail = meta.thumbnail || "";
-    } catch {}
+    } catch (e) {
+      const msg = (e as Error).message || "";
+      if (/sign in to confirm|not a bot|cookies/i.test(msg)) {
+        cleanupCookie();
+        return {
+          ok: false,
+          error: "YouTube memerlukan login untuk memverifikasi Anda bukan bot. Tambahkan cookies YouTube (format Netscape cookies.txt) di opsi lanjutan untuk melewati verifikasi ini.",
+          file: "", filePath: "", title: "", duration: 0, size: 0, waveform: [],
+        };
+      }
+    }
 
     // Download audio
-    await execFileAsync(YTDLP, [
-      "-x", "--audio-format", "mp3", "--audio-quality", "0",
-      "--no-playlist", "--no-warnings",
-      "-o", outPattern,
-      mediaUrl,
-    ], { maxBuffer: 50 * 1024 * 1024, timeout: 120000 });
+    try {
+      await execFileAsync(YTDLP, [
+        "-x", "--audio-format", "mp3", "--audio-quality", "0",
+        "--no-playlist", "--no-warnings",
+        ...cookieArgs,
+        "-o", outPattern,
+        mediaUrl,
+      ], { maxBuffer: 50 * 1024 * 1024, timeout: 120000 });
+    } catch (e) {
+      const msg = (e as Error).message || "";
+      if (/sign in to confirm|not a bot|cookies/i.test(msg)) {
+        cleanupCookie();
+        return {
+          ok: false,
+          error: "YouTube memerlukan login untuk memverifikasi Anda bukan bot. Tambahkan cookies YouTube (format Netscape cookies.txt) di opsi lanjutan untuk melewati verifikasi ini.",
+          file: "", filePath: "", title: "", duration: 0, size: 0, waveform: [],
+        };
+      }
+      throw e;
+    }
 
     // Find the downloaded file
     const files = readdirSync(UPLOAD_DIR).filter((f) => f.startsWith(id));
@@ -207,7 +252,77 @@ export async function extractAudioFromUrl(mediaUrl: string): Promise<ExtractResu
     };
   } catch (e) {
     return { ok: false, error: (e as Error).message, file: "", filePath: "", title: "", duration: 0, size: 0, waveform: [] };
+  } finally {
+    cleanupCookie();
   }
+}
+
+/**
+ * Normalize a cookies input into Netscape cookies.txt format.
+ * Accepts:
+ *  - Raw Netscape format (starts with "# Netscape" or tab-separated lines)
+ *  - Header-style "name=value" pairs (one per line, or comma-separated)
+ *  - JSON array of {name, value}
+ */
+function normalizeCookies(input: string): string {
+  const trimmed = input.trim();
+
+  // Already Netscape format?
+  if (/^# Netscape HTTP Cookie File/.test(trimmed) || /^#\s/m.test(trimmed)) {
+    return trimmed;
+  }
+
+  // Try JSON array
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (Array.isArray(parsed)) {
+      return jsonCookiesToNetscape(parsed);
+    }
+  } catch {}
+
+  // Header-style: name=value (one per line or comma-separated)
+  const lines = trimmed.split(/[\n,]+/).map((l) => l.trim()).filter(Boolean);
+  if (lines.length > 0 && lines[0].includes("=")) {
+    return headerCookiesToNetscape(lines);
+  }
+
+  // If it looks like tab-separated Netscape without header, return as is
+  if (lines.some((l) => l.split("\t").length >= 7)) {
+    return "# Netscape HTTP Cookie File\n" + trimmed + "\n";
+  }
+
+  return trimmed;
+}
+
+function headerCookiesToNetscape(lines: string[]): string {
+  const out: string[] = ["# Netscape HTTP Cookie File", "# https://curl.se/docs/http-cookies.html"];
+  const TAB = "\t";
+  for (const line of lines) {
+    const eqIdx = line.indexOf("=");
+    if (eqIdx < 0) continue;
+    const name = line.slice(0, eqIdx).trim();
+    const value = line.slice(eqIdx + 1).trim();
+    if (!name) continue;
+    // domain   FLAG    path    secure  expiration      name    value
+    out.push([`.youtube.com`, `TRUE`, `/`, `TRUE`, `0`, name, value].join(TAB));
+  }
+  return out.join("\n") + "\n";
+}
+
+function jsonCookiesToNetscape(cookies: any[]): string {
+  const out: string[] = ["# Netscape HTTP Cookie File"];
+  const TAB = "\t";
+  for (const c of cookies) {
+    const name = c.name || "";
+    const value = c.value || "";
+    const domain = c.domain || ".youtube.com";
+    const flag = String(domain).startsWith(".") ? "TRUE" : "FALSE";
+    const path = c.path || "/";
+    const secure = c.secure !== false ? "TRUE" : "FALSE";
+    const exp = c.expirationDate || c.expires || Math.floor(Date.now() / 1000) + 86400 * 30;
+    out.push([domain, flag, path, secure, String(Math.floor(exp)), name, value].join(TAB));
+  }
+  return out.join("\n") + "\n";
 }
 
 /** Save an uploaded file to the uploads dir */

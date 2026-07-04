@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { extractAudioFromUrl, saveUploadedFile } from "@/lib/audio-processor";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+export const maxDuration = 180;
 
 /** POST /api/audio/extract
- * Body: { url: string }  -> extract audio from YouTube/SoundCloud
+ * Body: { url: string, cookies?: string }  -> extract audio from YouTube/SoundCloud
  * OR multipart/form-data with field "file" -> upload local file
  */
 export async function POST(req: NextRequest) {
@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const url = body.url as string;
+    const cookies = body.cookies as string | undefined;
     if (!url) {
       return NextResponse.json({ error: "URL wajib diisi" }, { status: 400 });
     }
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Hanya mendukung URL dari YouTube atau SoundCloud" }, { status: 400 });
     }
 
-    const result = await extractAudioFromUrl(url);
+    const result = await extractAudioFromUrl(url, cookies);
     return NextResponse.json(result, { status: result.ok ? 200 : 500 });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
