@@ -2,7 +2,8 @@ import { create } from "zustand";
 
 export type SourceType = "youtube" | "soundcloud" | "file";
 
-export interface SourceInfo {
+export interface SourceItem {
+  id: string;
   type: SourceType;
   url?: string;
   fileName?: string;
@@ -10,8 +11,8 @@ export interface SourceInfo {
   duration: number;
   size: number;
   waveform: number[];
-  // internal file name in the mini-service uploads dir
   inputFile: string;
+  selected: boolean;
 }
 
 export interface ProcessSettings {
@@ -24,11 +25,27 @@ export interface ProcessSettings {
   volumeNormalize: boolean;
 }
 
-export interface ProcessedInfo {
-  fileName: string; // name in processed dir
+export interface ProcessedItem {
+  sourceId: string;
+  fileName: string;
   duration: number;
   size: number;
   waveform: number[];
+  assetName: string;
+  selectedForUpload: boolean;
+}
+
+export type ModerationState = "Pending" | "Reviewing" | "Approved" | "Rejected" | "Unknown";
+
+export interface UploadState {
+  status: "idle" | "uploading" | "processing" | "uploaded" | "failed";
+  assetId?: string;
+  operationId?: string;
+  moderationState: ModerationState | null;
+  moderationReason: string | null;
+  error?: string;
+  polling: boolean;
+  historyItemId?: string;
 }
 
 export interface RobloxAccount {
@@ -117,65 +134,6 @@ export const BYPASS_PRESETS: BypassPreset[] = [
   },
 ];
 
-interface ConverterState {
-  // Source
-  source: SourceInfo | null;
-  sourceLoading: boolean;
-  sourceError: string | null;
-  // Optional yt-dlp cookies (Netscape cookies.txt) for YouTube bot-check bypass
-  cookies: string;
-  setCookies: (c: string) => void;
-
-  // Settings
-  settings: ProcessSettings;
-  activePresetId: string;
-
-  // Processed
-  processed: ProcessedInfo | null;
-  processing: boolean;
-  processError: string | null;
-
-  // Roblox
-  account: RobloxAccount | null;
-  verifying: boolean;
-  verifyError: string | null;
-  uploading: boolean;
-  uploadProgress: number;
-  uploadError: string | null;
-  uploadResult: { assetId: string } | null;
-  // Moderation status (real-time polling after upload)
-  moderationState: "Pending" | "Reviewing" | "Approved" | "Rejected" | "Unknown" | null;
-  moderationReason: string | null;
-  moderationPolling: boolean;
-
-  // History refresh trigger
-  historyVersion: number;
-
-  // Actions
-  setSource: (s: SourceInfo | null) => void;
-  setSourceLoading: (b: boolean) => void;
-  setSourceError: (e: string | null) => void;
-  setSettings: (s: Partial<ProcessSettings>) => void;
-  applyPreset: (preset: BypassPreset) => void;
-  setActivePreset: (id: string) => void;
-  setProcessed: (p: ProcessedInfo | null) => void;
-  setProcessing: (b: boolean) => void;
-  setProcessError: (e: string | null) => void;
-  setAccount: (a: RobloxAccount | null) => void;
-  setVerifying: (b: boolean) => void;
-  setVerifyError: (e: string | null) => void;
-  setUploading: (b: boolean) => void;
-  setUploadProgress: (n: number) => void;
-  setUploadError: (e: string | null) => void;
-  setUploadResult: (r: { assetId: string } | null) => void;
-  setModerationState: (s: ConverterState["moderationState"]) => void;
-  setModerationReason: (r: string | null) => void;
-  setModerationPolling: (b: boolean) => void;
-  resetProcessed: () => void;
-  refreshHistory: () => void;
-  resetAll: () => void;
-}
-
 const DEFAULT_SETTINGS: ProcessSettings = {
   speed: 1,
   pitch: 0,
@@ -186,36 +144,130 @@ const DEFAULT_SETTINGS: ProcessSettings = {
   volumeNormalize: false,
 };
 
-export const useConverter = create<ConverterState>((set) => ({
-  source: null,
+interface ConverterState {
+  // Sources queue (multi)
+  sources: SourceItem[];
+  sourceLoading: boolean;
+  sourceError: string | null;
+  cookies: string;
+
+  // Settings (shared across all)
+  settings: ProcessSettings;
+  activePresetId: string;
+
+  // Processed items (keyed by sourceId)
+  processedMap: Record<string, ProcessedItem>;
+  processing: boolean;
+  processError: string | null;
+  processingSourceId: string | null; // currently processing item
+
+  // Upload states (keyed by sourceId)
+  uploadMap: Record<string, UploadState>;
+  uploading: boolean;
+
+  // Roblox account
+  account: RobloxAccount | null;
+  verifying: boolean;
+  verifyError: string | null;
+
+  // History
+  historyVersion: number;
+
+  // Actions - Sources
+  addSource: (s: Omit<SourceItem, "id" | "selected">) => void;
+  removeSource: (id: string) => void;
+  toggleSourceSelected: (id: string) => void;
+  selectAllSources: (val: boolean) => void;
+  clearSources: () => void;
+  setSourceLoading: (b: boolean) => void;
+  setSourceError: (e: string | null) => void;
+  setCookies: (c: string) => void;
+
+  // Actions - Settings
+  setSettings: (s: Partial<ProcessSettings>) => void;
+  applyPreset: (preset: BypassPreset) => void;
+
+  // Actions - Processed
+  setProcessed: (sourceId: string, item: ProcessedItem) => void;
+  removeProcessed: (sourceId: string) => void;
+  toggleProcessedSelected: (sourceId: string) => void;
+  selectAllProcessed: (val: boolean) => void;
+  setProcessing: (b: boolean) => void;
+  setProcessError: (e: string | null) => void;
+  setProcessingSourceId: (id: string | null) => void;
+
+  // Actions - Upload
+  setUploadState: (sourceId: string, state: Partial<UploadState>) => void;
+  setUploading: (b: boolean) => void;
+
+  // Actions - Account
+  setAccount: (a: RobloxAccount | null) => void;
+  setVerifying: (b: boolean) => void;
+  setVerifyError: (e: string | null) => void;
+
+  // Actions - History
+  refreshHistory: () => void;
+  resetAll: () => void;
+}
+
+function genId() {
+  return `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export const useConverter = create<ConverterState>((set, get) => ({
+  sources: [],
   sourceLoading: false,
   sourceError: null,
   cookies: "",
-  setCookies: (c) => set({ cookies: c }),
+
   settings: { ...DEFAULT_SETTINGS },
   activePresetId: "none",
-  processed: null,
+
+  processedMap: {},
   processing: false,
   processError: null,
+  processingSourceId: null,
+
+  uploadMap: {},
+  uploading: false,
+
   account: null,
   verifying: false,
   verifyError: null,
-  uploading: false,
-  uploadProgress: 0,
-  uploadError: null,
-  uploadResult: null,
-  moderationState: null,
-  moderationReason: null,
-  moderationPolling: false,
+
   historyVersion: 0,
 
-  setSource: (s) => set({ source: s, processed: null, processError: null }),
+  // Sources
+  addSource: (s) =>
+    set((state) => ({
+      sources: [...state.sources, { ...s, id: genId(), selected: true }],
+    })),
+  removeSource: (id) =>
+    set((state) => {
+      const sources = state.sources.filter((s) => s.id !== id);
+      const processedMap = { ...state.processedMap };
+      delete processedMap[id];
+      const uploadMap = { ...state.uploadMap };
+      delete uploadMap[id];
+      return { sources, processedMap, uploadMap };
+    }),
+  toggleSourceSelected: (id) =>
+    set((state) => ({
+      sources: state.sources.map((s) => (s.id === id ? { ...s, selected: !s.selected } : s)),
+    })),
+  selectAllSources: (val) =>
+    set((state) => ({
+      sources: state.sources.map((s) => ({ ...s, selected: val })),
+    })),
+  clearSources: () => set({ sources: [], processedMap: {}, uploadMap: {} }),
   setSourceLoading: (b) => set({ sourceLoading: b }),
   setSourceError: (e) => set({ sourceError: e }),
+  setCookies: (c) => set({ cookies: c }),
+
+  // Settings
   setSettings: (s) =>
     set((state) => {
       const next = { ...state.settings, ...s };
-      // Detect if matches a preset
       const matched = BYPASS_PRESETS.find(
         (p) =>
           p.settings.speed === next.speed &&
@@ -228,42 +280,85 @@ export const useConverter = create<ConverterState>((set) => ({
       );
       return { settings: next, activePresetId: matched?.id ?? "custom" };
     }),
-  applyPreset: (preset) =>
-    set({
-      settings: { ...DEFAULT_SETTINGS, ...preset.settings },
-      activePresetId: preset.id,
-      processed: null,
-      processError: null,
+  applyPreset: (preset) => set({ settings: { ...DEFAULT_SETTINGS, ...preset.settings }, activePresetId: preset.id }),
+
+  // Processed
+  setProcessed: (sourceId, item) =>
+    set((state) => ({
+      processedMap: { ...state.processedMap, [sourceId]: item },
+    })),
+  removeProcessed: (sourceId) =>
+    set((state) => {
+      const processedMap = { ...state.processedMap };
+      delete processedMap[sourceId];
+      return { processedMap };
     }),
-  setActivePreset: (id) => set({ activePresetId: id }),
-  setProcessed: (p) => set({ processed: p, processError: null }),
+  toggleProcessedSelected: (sourceId) =>
+    set((state) => {
+      const item = state.processedMap[sourceId];
+      if (!item) return state;
+      return {
+        processedMap: {
+          ...state.processedMap,
+          [sourceId]: { ...item, selectedForUpload: !item.selectedForUpload },
+        },
+      };
+    }),
+  selectAllProcessed: (val) =>
+    set((state) => {
+      const processedMap: Record<string, ProcessedItem> = {};
+      for (const [k, v] of Object.entries(state.processedMap)) {
+        processedMap[k] = { ...v, selectedForUpload: val };
+      }
+      return { processedMap };
+    }),
   setProcessing: (b) => set({ processing: b }),
   setProcessError: (e) => set({ processError: e }),
+  setProcessingSourceId: (id) => set({ processingSourceId: id }),
+
+  // Upload
+  setUploadState: (sourceId, partial) =>
+    set((state) => {
+      const existing = state.uploadMap[sourceId] || {
+        status: "idle" as const,
+        moderationState: null,
+        moderationReason: null,
+        polling: false,
+      };
+      return {
+        uploadMap: { ...state.uploadMap, [sourceId]: { ...existing, ...partial } },
+      };
+    }),
+  setUploading: (b) => set({ uploading: b }),
+
+  // Account
   setAccount: (a) => set({ account: a, verifyError: null }),
   setVerifying: (b) => set({ verifying: b }),
   setVerifyError: (e) => set({ verifyError: e }),
-  setUploading: (b) => set({ uploading: b }),
-  setUploadProgress: (n) => set({ uploadProgress: n }),
-  setUploadError: (e) => set({ uploadError: e }),
-  setUploadResult: (r) => set({ uploadResult: r }),
-  setModerationState: (s) => set({ moderationState: s }),
-  setModerationReason: (r) => set({ moderationReason: r }),
-  setModerationPolling: (b) => set({ moderationPolling: b }),
-  resetProcessed: () => set({ processed: null, processError: null, uploadResult: null, uploadError: null, uploadProgress: 0, moderationState: null, moderationReason: null, moderationPolling: false }),
+
+  // History
   refreshHistory: () => set((s) => ({ historyVersion: s.historyVersion + 1 })),
   resetAll: () =>
     set({
-      source: null,
+      sources: [],
       sourceError: null,
       settings: { ...DEFAULT_SETTINGS },
       activePresetId: "none",
-      processed: null,
+      processedMap: {},
       processError: null,
-      uploadResult: null,
-      uploadError: null,
-      uploadProgress: 0,
-      moderationState: null,
-      moderationReason: null,
-      moderationPolling: false,
+      uploadMap: {},
+      uploading: false,
     }),
 }));
+
+/** Helper: get sources selected for processing */
+export function getSelectedSources(state: ConverterState): SourceItem[] {
+  return state.sources.filter((s) => s.selected);
+}
+
+/** Helper: get processed items selected for upload */
+export function getSelectedForUpload(state: ConverterState): { source: SourceItem; processed: ProcessedItem }[] {
+  return state.sources
+    .filter((s) => state.processedMap[s.id]?.selectedForUpload)
+    .map((s) => ({ source: s, processed: state.processedMap[s.id] }));
+}

@@ -7,15 +7,13 @@ import { BypassRecommendations } from "@/components/bypass-recommendations";
 import { ProcessingPanel } from "@/components/processing-panel";
 import { RobloxPanel } from "@/components/roblox-panel";
 import { HistoryList } from "@/components/history-list";
-import { WaveformPlayer } from "@/components/waveform-player";
+import { PreviewList } from "@/components/preview-list";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useConverter } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 export default function Home() {
-  const { source, processed } = useConverter();
 
   return (
     <div className="flex min-h-screen flex-col bg-background bg-grid">
@@ -63,8 +61,8 @@ export default function Home() {
             dengan Bypass Cerdas
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-balance text-sm text-muted-foreground sm:text-base">
-            Ekstrak dari YouTube, SoundCloud, atau unggah file. Atur kecepatan, pitch, amplifikasi, dan bass boost.
-            Upload langsung ke akun Roblox dengan rekomendasi bypass anti-deteksi hak cipta.
+            Tambahkan multiple audio dari YouTube, SoundCloud, atau upload file. Pilih bebas audio mana yang
+            akan diproses dengan bypass, lalu upload batch langsung ke akun Roblox dengan rekomendasi anti-deteksi.
           </p>
           <div className="mx-auto mt-6 flex max-w-2xl flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5"><Music4 className="h-3.5 w-3.5 text-primary" /> YouTube & SoundCloud</span>
@@ -93,55 +91,14 @@ export default function Home() {
             </Card>
           </div>
 
-          {/* Center column: waveform + processing */}
+          {/* Center column: preview list + processing */}
           <div className="space-y-4 lg:col-span-4">
             <Card className="p-4">
               <div className="mb-3 flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary">2</div>
-                <h2 className="text-sm font-semibold">Preview & Proses</h2>
+                <h2 className="text-sm font-semibold">Preview & Proses Batch</h2>
               </div>
-
-              <div className="space-y-3">
-                {/* Original audio */}
-                <div>
-                  <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50" /> Audio Asli
-                  </p>
-                  {source ? (
-                    <WaveformPlayer
-                      waveform={source.waveform}
-                      audioUrl={`/api/audio/file?name=${encodeURIComponent(source.inputFile)}&type=upload`}
-                      duration={source.duration}
-                      label={source.title}
-                      color="bg-muted-foreground/60"
-                    />
-                  ) : (
-                    <div className="flex h-[88px] items-center justify-center rounded-xl border border-dashed text-xs text-muted-foreground">
-                      Pilih sumber audio untuk preview
-                    </div>
-                  )}
-                </div>
-
-                {/* Processed audio */}
-                <div>
-                  <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-primary">
-                    <span className="h-1.5 w-1.5 rounded-full bg-primary" /> Audio Hasil Proses
-                  </p>
-                  {processed ? (
-                    <WaveformPlayer
-                      waveform={processed.waveform}
-                      audioUrl={`/api/audio/file?name=${encodeURIComponent(processed.fileName)}&type=processed`}
-                      duration={processed.duration}
-                      label="Audio setelah bypass & kustomisasi"
-                      color="bg-primary"
-                    />
-                  ) : (
-                    <div className="flex h-[88px] items-center justify-center rounded-xl border border-dashed border-primary/30 bg-primary/5 text-xs text-muted-foreground">
-                      Proses audio untuk melihat hasil
-                    </div>
-                  )}
-                </div>
-              </div>
+              <PreviewList />
             </Card>
 
             <Card className="p-4">
@@ -173,9 +130,9 @@ export default function Home() {
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {[
-              { n: "1", icon: Music4, title: "Pilih Sumber", desc: "Tempelkan link YouTube/SoundCloud atau upload file audio lokal.", color: "text-red-500" },
-              { n: "2", icon: Zap, title: "Proses & Bypass", desc: "Pilih preset bypass atau sesuaikan pitch, speed, bass, & reverb manual.", color: "text-orange-500" },
-              { n: "3", icon: UploadCloud, title: "Upload Roblox", desc: "Verifikasi dengan API Key Open Cloud, beri nama aset, lalu upload langsung ke akun/grup.", color: "text-emerald-500" },
+              { n: "1", icon: Music4, title: "Tambah Multiple Audio", desc: "Tempel link YouTube/SoundCloud atau upload file — tambah sebanyak yang diinginkan ke antrian.", color: "text-red-500" },
+              { n: "2", icon: Zap, title: "Pilih & Proses Batch", desc: "Pilih bebas audio mana yang akan diproses, terapkan bypass pitch/speed/bass ke semua sekaligus.", color: "text-orange-500" },
+              { n: "3", icon: UploadCloud, title: "Upload Multi Roblox", desc: "Pilih audio yang akan diupload, beri nama per aset, upload batch ke akun/grup Roblox.", color: "text-emerald-500" },
             ].map((s) => {
               const Icon = s.icon;
               return (
