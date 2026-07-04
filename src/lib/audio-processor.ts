@@ -181,6 +181,10 @@ export async function extractAudioFromUrl(mediaUrl: string, cookies?: string): P
     const outPattern = join(UPLOAD_DIR, `${id}.%(ext)s`);
 
     const cookieArgs = cookieFile ? ["--cookies", cookieFile] : [];
+    // Enable the node JS runtime so yt-dlp can solve YouTube's n-signature
+    // and signature challenges. Without this, YouTube returns "Requested format
+    // is not available" because only storyboards (images) are returned.
+    const runtimeArgs = ["--js-runtimes", "node"];
 
     // First, get metadata
     let title = "Audio Tidak Berjudul";
@@ -189,8 +193,8 @@ export async function extractAudioFromUrl(mediaUrl: string, cookies?: string): P
     let thumbnail = "";
     try {
       const { stdout } = await execFileAsync(YTDLP, [
-        "--no-playlist", "--no-warnings", "-J", ...cookieArgs, mediaUrl,
-      ], { maxBuffer: 30 * 1024 * 1024, timeout: 60000 });
+        ...runtimeArgs, "--no-playlist", "--no-warnings", "-J", ...cookieArgs, mediaUrl,
+      ], { maxBuffer: 30 * 1024 * 1024, timeout: 90000 });
       const meta = JSON.parse(stdout);
       title = meta.title || title;
       duration = meta.duration || 0;
@@ -211,12 +215,13 @@ export async function extractAudioFromUrl(mediaUrl: string, cookies?: string): P
     // Download audio
     try {
       await execFileAsync(YTDLP, [
+        ...runtimeArgs,
         "-x", "--audio-format", "mp3", "--audio-quality", "0",
         "--no-playlist", "--no-warnings",
         ...cookieArgs,
         "-o", outPattern,
         mediaUrl,
-      ], { maxBuffer: 50 * 1024 * 1024, timeout: 120000 });
+      ], { maxBuffer: 50 * 1024 * 1024, timeout: 180000 });
     } catch (e) {
       const msg = (e as Error).message || "";
       if (/sign in to confirm|not a bot|cookies/i.test(msg)) {
