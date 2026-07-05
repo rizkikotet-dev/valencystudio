@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Music4, Zap, ShieldCheck, UploadCloud, Github, Sparkles, AudioLines, ChevronRight } from "lucide-react";
+import { Music4, Zap, ShieldCheck, UploadCloud, Github, AudioLines, ChevronRight, Crown } from "lucide-react";
 import { SourceInput } from "@/components/source-input";
 import { BypassRecommendations } from "@/components/bypass-recommendations";
 import { ProcessingPanel } from "@/components/processing-panel";
@@ -26,9 +26,9 @@ export default function Home() {
             </div>
             <div className="leading-none">
               <h1 className="text-sm font-bold tracking-tight">
-                Roblox<span className="gradient-text">Audio</span> Studio
+                VALENCY <span className="gradient-text">STUDIO</span>
               </h1>
-              <p className="hidden text-[10px] text-muted-foreground sm:block">Konversi & Upload Audio ke Roblox</p>
+              <p className="hidden text-[10px] text-muted-foreground sm:block">By V.I.O.R — Konversi & Upload Audio ke Roblox</p>
             </div>
           </div>
           <nav className="ml-auto flex items-center gap-1">
@@ -53,7 +53,7 @@ export default function Home() {
       <section className="border-b bg-gradient-to-b from-primary/5 to-transparent">
         <div className="mx-auto max-w-7xl px-4 py-8 text-center sm:py-12">
           <Badge variant="secondary" className="mb-3 gap-1">
-            <Sparkles className="h-3 w-3" /> Powered by FFmpeg + yt-dlp
+            <Crown className="h-3 w-3" /> VALENCY STUDIO · By V.I.O.R
           </Badge>
           <h2 className="mx-auto max-w-3xl text-balance text-3xl font-bold tracking-tight sm:text-5xl">
             Konversi Audio ke{" "}
@@ -188,7 +188,7 @@ export default function Home() {
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-5 sm:flex-row">
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <AudioLines className="h-3.5 w-3.5 text-primary" />
-            <span>RobloxAudio Studio · Dibuat dengan FFmpeg & Next.js</span>
+            <span><b className="font-semibold text-foreground">VALENCY STUDIO</b> · By V.I.O.R · Dibuat dengan FFmpeg & Next.js</span>
           </p>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <a href="#how" className="hover:text-foreground">Cara Kerja</a>

@@ -15,10 +15,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "RobloxAudio Studio — Konversi & Upload Audio ke Roblox",
-  description: "Konversi audio dari YouTube, SoundCloud, atau file lokal dengan kecepatan, pitch, dan amplifikasi kustom. Upload langsung ke akun Roblox dengan bypass rekomendasi.",
-  keywords: ["Roblox", "Audio", "Converter", "YouTube", "SoundCloud", "FFmpeg", "Upload"],
-  authors: [{ name: "RobloxAudio Studio" }],
+  title: "VALENCY STUDIO — Konversi & Upload Audio ke Roblox | By V.I.O.R",
+  description: "VALENCY STUDIO by V.I.O.R — Konversi audio dari YouTube, SoundCloud, atau file lokal dengan kecepatan, pitch, dan amplifikasi kustom. Upload langsung ke akun Roblox dengan bypass rekomendasi.",
+  keywords: ["VALENCY STUDIO", "V.I.O.R", "Roblox", "Audio", "Converter", "YouTube", "SoundCloud", "FFmpeg", "Upload"],
+  authors: [{ name: "V.I.O.R" }],
   icons: {
     icon: "/logo.svg",
   },
