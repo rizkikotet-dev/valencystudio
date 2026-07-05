@@ -22,7 +22,7 @@ const PROCESSED_DIR = join(TMP_ROOT, "processed");
   if (!existsSync(d)) mkdirSync(d, { recursive: true });
 });
 
-const YTDLP = "/home/z/.venv/bin/yt-dlp";
+const YTDLP = process.platform === "win32" ? "./yt-dlp.exe" : "./yt-dlp";
 const FFMPEG = "ffmpeg";
 const FFPROBE = "ffprobe";
 
@@ -54,10 +54,6 @@ export interface ProcessOptions {
   speed?: number;
   pitch?: number;
   amplification?: number;
-  bassBoost?: number;
-  trebleBoost?: number;
-  reverb?: number;
-  volumeNormalize?: boolean;
 }
 
 /** Build FFmpeg filter chain for audio processing */
@@ -83,25 +79,8 @@ function buildFilterChain(opts: Required<Omit<ProcessOptions, "inputFile">>): st
     filters.push(`atempo=${speed.toFixed(4)}`);
   }
 
-  if (opts.bassBoost > 0) {
-    filters.push(`bass=g=${opts.bassBoost.toFixed(2)}:f=80:w=0.6`);
-  }
-  if (opts.trebleBoost > 0) {
-    filters.push(`treble=g=${opts.trebleBoost.toFixed(2)}:f=4000:w=0.5`);
-  }
   if (opts.amplification !== 0) {
     filters.push(`volume=${opts.amplification.toFixed(2)}dB`);
-  }
-  if (opts.reverb > 0) {
-    const r = Math.min(opts.reverb, 100) / 100;
-    const inGain = 0.8;
-    const outGain = 0.9 - r * 0.5;
-    const delays = "60|120|200";
-    const decays = `${(0.3 + r * 0.5).toFixed(3)}|${(0.25 + r * 0.4).toFixed(3)}|${(0.2 + r * 0.3).toFixed(3)}`;
-    filters.push(`aecho=${inGain}:${outGain}:${delays}:${decays}`);
-  }
-  if (opts.volumeNormalize) {
-    filters.push("loudnorm=I=-16:TP=-1.5:LRA=11");
   }
 
   return filters.join(",");
@@ -370,10 +349,6 @@ export async function processAudioFile(options: ProcessOptions): Promise<Process
       speed: options.speed ?? 1,
       pitch: options.pitch ?? 0,
       amplification: options.amplification ?? 0,
-      bassBoost: options.bassBoost ?? 0,
-      trebleBoost: options.trebleBoost ?? 0,
-      reverb: options.reverb ?? 0,
-      volumeNormalize: options.volumeNormalize ?? false,
     };
 
     const filter = buildFilterChain(fullOpts);

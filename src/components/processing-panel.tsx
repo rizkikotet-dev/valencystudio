@@ -1,11 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Gauge, Music2, Volume2, Waves, AudioWaveform, RotateCcw, Loader2, Zap, CheckCircle2 } from "lucide-react";
+import { Gauge, Music2, Volume2, AudioWaveform, RotateCcw, Loader2, Zap, CheckCircle2, Code2, Copy } from "lucide-react";
 import { useConverter } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -94,12 +93,29 @@ export function ProcessingPanel() {
   };
 
   const reset = () => {
-    setSettings({ speed: 1, pitch: 0, amplification: 0, bassBoost: 0, trebleBoost: 0, reverb: 0, volumeNormalize: false });
+    setSettings({ speed: 1, pitch: 0, amplification: 0 });
   };
 
   const isModified =
-    settings.speed !== 1 || settings.pitch !== 0 || settings.amplification !== 0 ||
-    settings.bassBoost !== 0 || settings.trebleBoost !== 0 || settings.reverb !== 0 || settings.volumeNormalize;
+    settings.speed !== 1 || settings.pitch !== 0 || settings.amplification !== 0;
+
+  // Roblox normalization values
+  const pitchMult = Math.pow(2, settings.pitch / 12);
+  const robloxPlaybackSpeed = 1 / (settings.speed * pitchMult);
+  const robloxVolume = Math.min(10, Math.max(0, Math.pow(10, -settings.amplification / 20) * 0.5));
+  const needsNormalization = isModified;
+
+  const robloxScript = `-- Paste di Roblox Studio (LocalScript atau Script)
+-- Normalkan audio bypass agar terdengar seperti aslinya
+local sound = script.Parent -- atau path ke Sound object
+
+sound.PlaybackSpeed = ${robloxPlaybackSpeed.toFixed(4)}
+sound.Volume = ${robloxVolume.toFixed(4)}`;
+
+  const handleCopyScript = () => {
+    navigator.clipboard.writeText(robloxScript);
+    toast.success("Script Luau disalin!");
+  };
 
   return (
     <div className="space-y-3">
@@ -129,20 +145,39 @@ export function ProcessingPanel() {
       )}
 
       <div className="space-y-3 rounded-xl border bg-card/30 p-3">
-        <SliderRow icon={Gauge} label="Kecepatan" value={settings.speed} min={0.25} max={4} step={0.01} unit="x" onChange={(v) => setSettings({ speed: v })} format={(v) => `${v.toFixed(2)}x`} />
+        <SliderRow icon={Gauge} label="Kecepatan (Speed)" value={settings.speed} min={0.25} max={4} step={0.01} unit="x" onChange={(v) => setSettings({ speed: v })} format={(v) => `${v.toFixed(2)}x`} />
         <SliderRow icon={Music2} label="Pitch" value={settings.pitch} min={-12} max={12} step={0.5} unit=" st" onChange={(v) => setSettings({ pitch: v })} format={(v) => `${v > 0 ? "+" : ""}${v} st`} accent="text-orange-500" />
-        <SliderRow icon={Volume2} label="Amplifikasi" value={settings.amplification} min={-20} max={20} step={0.5} unit="dB" onChange={(v) => setSettings({ amplification: v })} format={(v) => `${v > 0 ? "+" : ""}${v} dB`} accent="text-emerald-500" />
-        <SliderRow icon={Waves} label="Bass Boost" value={settings.bassBoost} min={0} max={20} step={0.5} unit="dB" onChange={(v) => setSettings({ bassBoost: v })} format={(v) => `+${v} dB`} accent="text-purple-500" />
-        <SliderRow icon={Zap} label="Treble Boost" value={settings.trebleBoost} min={0} max={20} step={0.5} unit="dB" onChange={(v) => setSettings({ trebleBoost: v })} format={(v) => `+${v} dB`} accent="text-cyan-500" />
-        <SliderRow icon={Waves} label="Reverb" value={settings.reverb} min={0} max={100} step={1} unit="%" onChange={(v) => setSettings({ reverb: v })} format={(v) => `${v}%`} accent="text-pink-500" />
-        <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
-          <div className="flex items-center gap-2">
-            <Volume2 className="h-3.5 w-3.5 text-muted-foreground" />
-            <Label className="text-xs font-medium">Normalisasi Volume</Label>
-          </div>
-          <Switch checked={settings.volumeNormalize} onCheckedChange={(c) => setSettings({ volumeNormalize: c })} />
-        </div>
+        <SliderRow icon={Volume2} label="Volume (Amplifikasi)" value={settings.amplification} min={-20} max={20} step={0.5} unit="dB" onChange={(v) => setSettings({ amplification: v })} format={(v) => `${v > 0 ? "+" : ""}${v} dB`} accent="text-emerald-500" />
       </div>
+
+      {/* Roblox normalization info */}
+      {needsNormalization && (
+        <div className="space-y-2 rounded-xl border border-primary/20 bg-primary/5 p-3">
+          <div className="flex items-center gap-2">
+            <Code2 className="h-3.5 w-3.5 text-primary" />
+            <span className="text-xs font-semibold">Normalisasi di Roblox Studio</span>
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            Set properti Sound ini di Roblox Studio agar audio terdengar normal (undo bypass):
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-lg bg-background/60 px-2.5 py-1.5">
+              <p className="text-[10px] text-muted-foreground">PlaybackSpeed</p>
+              <p className="font-mono text-xs font-bold">{robloxPlaybackSpeed.toFixed(4)}</p>
+            </div>
+            <div className="rounded-lg bg-background/60 px-2.5 py-1.5">
+              <p className="text-[10px] text-muted-foreground">Volume</p>
+              <p className="font-mono text-xs font-bold">{robloxVolume.toFixed(4)}</p>
+            </div>
+          </div>
+          <div className="relative">
+            <pre className="scrollbar-custom overflow-x-auto rounded-lg bg-background/80 p-2.5 font-mono text-[10px] leading-relaxed text-foreground/80">{robloxScript}</pre>
+            <Button variant="ghost" size="icon" className="absolute right-1 top-1 h-6 w-6" onClick={handleCopyScript} title="Salin script">
+              <Copy className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {processError && (
         <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{processError}</div>

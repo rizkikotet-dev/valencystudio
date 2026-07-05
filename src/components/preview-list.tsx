@@ -1,12 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { FileAudio, Loader2, CheckCircle2, AlertTriangle, Zap } from "lucide-react";
+import { FileAudio, Loader2, CheckCircle2, AlertTriangle, Zap, Download, Pencil } from "lucide-react";
 import { useConverter, type SourceItem } from "@/lib/store";
 import { WaveformPlayer } from "@/components/waveform-player";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 function fmtDur(s: number) {
@@ -62,9 +64,17 @@ export function PreviewList() {
 }
 
 function PreviewItem({ item, onToggle, isProcessing }: { item: SourceItem; onToggle: () => void; isProcessing: boolean }) {
-  const { processedMap, uploadMap } = useConverter();
+  const { processedMap, uploadMap, setProcessed } = useConverter();
   const processed = processedMap[item.id];
   const upload = uploadMap[item.id];
+
+  const handleDownload = () => {
+    if (!processed) return;
+    const a = document.createElement("a");
+    a.href = `/api/audio/file?name=${encodeURIComponent(processed.fileName)}&type=processed`;
+    a.download = `${processed.assetName || item.title}.ogg`;
+    a.click();
+  };
 
   return (
     <div className={cn("rounded-lg border p-2.5 transition-colors", item.selected ? "border-primary/30 bg-card/60" : "border-border bg-card/30 opacity-60")}>
@@ -96,6 +106,22 @@ function PreviewItem({ item, onToggle, isProcessing }: { item: SourceItem; onTog
             compact
             color="bg-primary"
           />
+          {/* Rename + Download */}
+          <div className="mt-1.5 flex items-center gap-1.5">
+            <div className="relative flex-1">
+              <Pencil className="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={processed.assetName}
+                onChange={(e) => setProcessed(item.id, { ...processed, assetName: e.target.value.slice(0, 50) })}
+                maxLength={50}
+                placeholder="Nama untuk upload"
+                className="h-7 pl-7 text-[11px]"
+              />
+            </div>
+            <Button variant="outline" size="icon" className="h-7 w-7 shrink-0" onClick={handleDownload} title="Download audio">
+              <Download className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
       ) : isProcessing ? (
         <div className="mt-1.5 flex h-[44px] items-center justify-center rounded-lg border border-primary/30 bg-primary/5">

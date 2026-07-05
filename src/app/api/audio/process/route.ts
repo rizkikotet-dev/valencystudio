@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 export const maxDuration = 120;
 
 /** POST /api/audio/process
- * Body: ProcessOptions { inputFile, speed, pitch, amplification, bassBoost, trebleBoost, reverb, volumeNormalize }
+ * Body: ProcessOptions { inputFile, speed, pitch, amplification }
  */
 export async function POST(req: NextRequest) {
   try {
@@ -18,10 +18,6 @@ export async function POST(req: NextRequest) {
       speed: clamp(body.speed ?? 1, 0.25, 4),
       pitch: clamp(body.pitch ?? 0, -12, 12),
       amplification: clamp(body.amplification ?? 0, -30, 30),
-      bassBoost: clamp(body.bassBoost ?? 0, 0, 20),
-      trebleBoost: clamp(body.trebleBoost ?? 0, 0, 20),
-      reverb: clamp(body.reverb ?? 0, 0, 100),
-      volumeNormalize: !!body.volumeNormalize,
     };
     const result = await processAudioFile(safe);
     return NextResponse.json(result, { status: result.ok ? 200 : 500 });

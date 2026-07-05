@@ -20,10 +20,6 @@ export interface ProcessSettings {
   speed: number;
   pitch: number;
   amplification: number;
-  bassBoost: number;
-  trebleBoost: number;
-  reverb: number;
-  volumeNormalize: boolean;
 }
 
 export interface ProcessedItem {
@@ -74,31 +70,31 @@ export const BYPASS_PRESETS: BypassPreset[] = [
     name: "Original",
     description: "Tidak ada modifikasi. Audio asli tanpa bypass.",
     icon: "🎵",
-    settings: { speed: 1, pitch: 0, amplification: 0, bassBoost: 0, trebleBoost: 0, reverb: 0, volumeNormalize: false },
+    settings: { speed: 1, pitch: 0, amplification: 0 },
     recommended: false,
   },
   {
     id: "pitch-up",
     name: "Pitch +2 Semitone",
-    description: "Naikkan pitch 2 semitone. Bypass deteksi sidik jari audio yang umum.",
+    description: "Naikkan pitch 2 semitone. Di Roblox set PlaybackSpeed untuk normalkan.",
     icon: "⬆️",
-    settings: { speed: 1, pitch: 2, amplification: 0, bassBoost: 0, trebleBoost: 0, reverb: 0, volumeNormalize: false },
+    settings: { speed: 1, pitch: 2, amplification: 0 },
     recommended: true,
   },
   {
     id: "pitch-down",
     name: "Pitch -2 Semitone",
-    description: "Turunkan pitch 2 semitone. Alternatif bypass yang natural.",
+    description: "Turunkan pitch 2 semitone. Di Roblox set PlaybackSpeed untuk normalkan.",
     icon: "⬇️",
-    settings: { speed: 1, pitch: -2, amplification: 0, bassBoost: 0, trebleBoost: 0, reverb: 0, volumeNormalize: false },
+    settings: { speed: 1, pitch: -2, amplification: 0 },
     recommended: true,
   },
   {
     id: "speed-up",
     name: "Speed 1.08x",
-    description: "Percepat 8%. Mengubah durasi sehingga sidik jari tidak cocok.",
+    description: "Percepat 8%. Di Roblox set PlaybackSpeed = 0.926 untuk normalkan.",
     icon: "⚡",
-    settings: { speed: 1.08, pitch: 0, amplification: 0, bassBoost: 0, trebleBoost: 0, reverb: 0, volumeNormalize: false },
+    settings: { speed: 1.08, pitch: 0, amplification: 0 },
     recommended: true,
   },
   {
@@ -106,7 +102,7 @@ export const BYPASS_PRESETS: BypassPreset[] = [
     name: "Pitch +1.5 & Speed 1.05x",
     description: "Kombinasi pitch & speed. Bypass paling efektif untuk audio populer.",
     icon: "🎯",
-    settings: { speed: 1.05, pitch: 1.5, amplification: 0, bassBoost: 0, trebleBoost: 0, reverb: 0, volumeNormalize: false },
+    settings: { speed: 1.05, pitch: 1.5, amplification: 0 },
     recommended: true,
   },
   {
@@ -114,23 +110,15 @@ export const BYPASS_PRESETS: BypassPreset[] = [
     name: "Nightcore",
     description: "Pitch +4 & Speed 1.25x. Gaya nightcore, bypass kuat untuk lagu pop.",
     icon: "🌙",
-    settings: { speed: 1.25, pitch: 4, amplification: 0, bassBoost: 0, trebleBoost: 0, reverb: 0, volumeNormalize: false },
-    recommended: false,
-  },
-  {
-    id: "bass-boost",
-    name: "Bass Boost + Reverb",
-    description: "Bass +8dB dengan reverb ringan. Mengubah karakter frekuensi audio.",
-    icon: "🔊",
-    settings: { speed: 1, pitch: 0, amplification: 0, bassBoost: 8, trebleBoost: 0, reverb: 15, volumeNormalize: false },
+    settings: { speed: 1.25, pitch: 4, amplification: 0 },
     recommended: false,
   },
   {
     id: "subtle-mix",
     name: "Subtle Mix",
-    description: "Pitch +1, Speed 1.03x, Bass +3dB. Bypass halus yang tetap enak didengar.",
+    description: "Pitch +1, Speed 1.03x, Vol +2dB. Bypass halus yang tetap enak didengar.",
     icon: "✨",
-    settings: { speed: 1.03, pitch: 1, amplification: 0, bassBoost: 3, trebleBoost: 0, reverb: 0, volumeNormalize: true },
+    settings: { speed: 1.03, pitch: 1, amplification: 2 },
     recommended: true,
   },
 ];
@@ -139,10 +127,6 @@ const DEFAULT_SETTINGS: ProcessSettings = {
   speed: 1,
   pitch: 0,
   amplification: 0,
-  bassBoost: 0,
-  trebleBoost: 0,
-  reverb: 0,
-  volumeNormalize: false,
 };
 
 interface ConverterState {
@@ -275,11 +259,7 @@ export const useConverter = create<ConverterState>()(
         (p) =>
           p.settings.speed === next.speed &&
           p.settings.pitch === next.pitch &&
-          p.settings.amplification === next.amplification &&
-          p.settings.bassBoost === next.bassBoost &&
-          p.settings.trebleBoost === next.trebleBoost &&
-          p.settings.reverb === next.reverb &&
-          (p.settings.volumeNormalize ?? false) === next.volumeNormalize,
+          p.settings.amplification === next.amplification,
       );
       return { settings: next, activePresetId: matched?.id ?? "custom" };
     }),

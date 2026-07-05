@@ -20,7 +20,7 @@ const PROCESSED_DIR = join(import.meta.dir, "processed");
   if (!existsSync(d)) mkdirSync(d, { recursive: true });
 });
 
-const YTDLP = "/home/z/.venv/bin/yt-dlp";
+const YTDLP = "./yt-dlp";
 const FFMPEG = "ffmpeg";
 const FFPROBE = "ffprobe";
 

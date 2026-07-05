@@ -19,8 +19,8 @@ interface HistoryItem {
   speed: number;
   pitch: number;
   amplification: number;
-  bassBoost: number;
-  reverb: number;
+  bassBoost?: number;
+  reverb?: number;
   bypassMode: string | null;
   robloxAssetId: string | null;
   uploadStatus: string;

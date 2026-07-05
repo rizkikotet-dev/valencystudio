@@ -4,7 +4,7 @@ import * as React from "react";
 import {
   ShieldCheck, Loader2, UploadCloud, LogOut, ExternalLink, KeyRound,
   CheckCircle2, AlertTriangle, Info, User, Users, BookOpen, Link as LinkIcon,
-  Clock, XCircle, RefreshCw,
+  Clock, XCircle, RefreshCw, Download,
 } from "lucide-react";
 import { useConverter, type SourceItem, type ProcessedItem, type ModerationState } from "@/lib/store";
 import { Button } from "@/components/ui/button";
@@ -202,7 +202,7 @@ export function RobloxPanel() {
             assetName: processed.assetName, originalFile: source.inputFile, processedFile: processed.fileName,
             duration: processed.duration, fileSize: processed.size,
             speed: settings.speed, pitch: settings.pitch, amplification: settings.amplification,
-            bassBoost: settings.bassBoost, reverb: settings.reverb,
+            bassBoost: 0, reverb: 0,
             bypassMode: detectBypassMode(settings), uploadStatus: "processing",
           }),
         });
@@ -444,6 +444,13 @@ function UploadItemCard({
   const Icon = cfg.icon;
   const isBusy = upload?.status === "uploading" || upload?.status === "processing" || upload?.polling;
 
+  const handleDownload = () => {
+    const a = document.createElement("a");
+    a.href = `/api/audio/file?name=${encodeURIComponent(processed.fileName)}&type=processed`;
+    a.download = `${processed.assetName || source.title}.ogg`;
+    a.click();
+  };
+
   return (
     <div className={cn("rounded-lg border p-2.5 transition-colors", processed.selectedForUpload ? "border-primary/30 bg-card/60" : "border-border bg-card/30 opacity-70")}>
       <div className="flex items-center gap-2">
@@ -457,6 +464,9 @@ function UploadItemCard({
             className="h-7 border-none bg-transparent px-0 text-xs font-semibold shadow-none focus-visible:ring-0"
           />
         </div>
+        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={handleDownload} title="Download audio">
+          <Download className="h-3.5 w-3.5" />
+        </Button>
         {upload?.status === "uploaded" || upload?.assetId ? (
           <span className="flex items-center gap-1 text-[10px] font-medium" style={{ color: cfg.color }}>
             <Icon className={cn("h-3 w-3", upload?.moderationState === "Reviewing" && "animate-spin")} />
@@ -513,11 +523,10 @@ function getModConfig(state: ModerationState | null) {
   }
 }
 
-function detectBypassMode(s: { speed: number; pitch: number; amplification: number; bassBoost: number; reverb: number; volumeNormalize: boolean }) {
-  if (s.speed === 1 && s.pitch === 0 && s.bassBoost === 0 && s.reverb === 0) return "none";
+function detectBypassMode(s: { speed: number; pitch: number; amplification: number }) {
+  if (s.speed === 1 && s.pitch === 0) return "none";
   if (s.pitch !== 0 && s.speed !== 1) return "pitch_speed";
   if (s.pitch !== 0) return "pitch";
   if (s.speed !== 1) return "speed";
-  if (s.bassBoost !== 0 || s.reverb !== 0) return "bass";
   return "custom";
 }
