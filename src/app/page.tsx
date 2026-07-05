@@ -11,9 +11,12 @@ import { PreviewList } from "@/components/preview-list";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
 
 export default function Home() {
+  const hydrated = useHydrated();
 
   return (
     <div className="flex min-h-screen flex-col bg-background bg-grid">
@@ -83,7 +86,7 @@ export default function Home() {
                 <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary">1</div>
                 <h2 className="text-sm font-semibold">Pilih Sumber Audio</h2>
               </div>
-              <SourceInput />
+              {hydrated ? <SourceInput /> : <SourceInputSkeleton />}
             </Card>
 
             <Card className="p-4">
@@ -98,11 +101,11 @@ export default function Home() {
                 <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary">2</div>
                 <h2 className="text-sm font-semibold">Preview & Proses Batch</h2>
               </div>
-              <PreviewList />
+              {hydrated ? <PreviewList /> : <PreviewSkeleton />}
             </Card>
 
             <Card className="p-4">
-              <ProcessingPanel />
+              {hydrated ? <ProcessingPanel /> : <Skeleton className="h-64 w-full" />}
             </Card>
           </div>
 
@@ -113,7 +116,7 @@ export default function Home() {
                 <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary">3</div>
                 <h2 className="text-sm font-semibold">Upload ke Roblox</h2>
               </div>
-              <RobloxPanel />
+              {hydrated ? <RobloxPanel /> : <Skeleton className="h-64 w-full" />}
             </Card>
 
             <Card className="flex min-h-[300px] flex-1 flex-col p-4">
@@ -199,6 +202,33 @@ export default function Home() {
           </div>
         </div>
       </footer>
+    </div>
+  );
+}
+
+function SourceInputSkeleton() {
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-3 gap-1.5">
+        {[0, 1, 2].map((i) => (
+          <Skeleton key={i} className="h-14 w-full rounded-lg" />
+        ))}
+      </div>
+      <Skeleton className="h-10 w-full" />
+      <Skeleton className="h-24 w-full" />
+    </div>
+  );
+}
+
+function PreviewSkeleton() {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-4 w-16" />
+      </div>
+      <Skeleton className="h-[88px] w-full rounded-xl" />
+      <Skeleton className="h-[88px] w-full rounded-xl" />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 
 export type SourceType = "youtube" | "soundcloud" | "file";
 
@@ -214,7 +215,9 @@ function genId() {
   return `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export const useConverter = create<ConverterState>((set, get) => ({
+export const useConverter = create<ConverterState>()(
+  persist(
+    (set, get) => ({
   sources: [],
   sourceLoading: false,
   sourceError: null,
@@ -349,7 +352,60 @@ export const useConverter = create<ConverterState>((set, get) => ({
       uploadMap: {},
       uploading: false,
     }),
-}));
+    }),
+    {
+      name: "valency-studio-storage",
+      storage: createJSONStorage(() => localStorage),
+      // Only persist these fields (exclude transient loading/error states)
+      partialize: (state) => ({
+        account: state.account,
+        sources: state.sources,
+        cookies: state.cookies,
+        settings: state.settings,
+        activePresetId: state.activePresetId,
+        processedMap: state.processedMap,
+        uploadMap: state.uploadMap,
+      }),
+      // Don't persist transient states - reset on rehydrate
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          // Reset transient/loading states after rehydration
+          state.sourceLoading = false;
+          state.sourceError = null;
+          state.processing = false;
+          state.processError = null;
+          state.processingSourceId = null;
+          state.uploading = false;
+          state.verifying = false;
+          state.verifyError = null;
+          // For uploads: keep polling=true if we have operationId or assetId
+          // (roblox-panel will resume polling automatically). Only mark as failed
+          // if we have neither (upload was interrupted mid-create).
+          if (state.uploadMap) {
+            for (const [id, u] of Object.entries(state.uploadMap)) {
+              if (u.status === "uploading" && !u.operationId && !u.assetId) {
+                state.uploadMap[id] = {
+                  ...u,
+                  polling: false,
+                  status: "failed",
+                  error: "Upload terputus saat sesi berakhir. Silakan upload ulang.",
+                };
+              } else if (u.status === "processing" && !u.operationId && !u.assetId) {
+                state.uploadMap[id] = {
+                  ...u,
+                  polling: false,
+                  status: "failed",
+                  error: "Upload terputus. Silakan upload ulang.",
+                };
+              }
+              // Otherwise keep polling=true — roblox-panel useEffect will resume
+            }
+          }
+        }
+      },
+    },
+  ),
+);
 
 /** Helper: get sources selected for processing */
 export function getSelectedSources(state: ConverterState): SourceItem[] {
