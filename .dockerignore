@@ -1,0 +1,8 @@
+.next
+node_modules
+.tmp-audio
+prisma/db/*.db
+prisma/db/*.db-journal
+yt-dlp.exe
+.env
+.env.local

@@ -61,7 +61,7 @@ const SOURCE_ICON: Record<string, React.ElementType> = {
 };
 
 export function HistoryList() {
-  const { historyVersion } = useConverter();
+  const { historyVersion, account } = useConverter();
   const [items, setItems] = React.useState<HistoryItem[]>([]);
   const [loading, setLoading] = React.useState(true);
 
@@ -81,6 +81,58 @@ export function HistoryList() {
   React.useEffect(() => {
     load();
   }, [load, historyVersion]);
+
+  // Polling for pending/reviewing items
+  React.useEffect(() => {
+    const pendingItems = items.filter(
+      (i) => i.uploadStatus === "uploaded" && i.robloxAssetId && (i.moderationStatus === "Pending" || i.moderationStatus === "Reviewing")
+    );
+
+    if (pendingItems.length === 0 || !account?.apiKey) return;
+
+    const interval = setInterval(async () => {
+      let updated = false;
+      const newItems = [...items];
+
+      for (const item of pendingItems) {
+        try {
+          const res = await fetch(`/api/roblox/status?apiKey=${encodeURIComponent(account.apiKey)}&assetId=${item.robloxAssetId}`);
+          const data = await res.json();
+          
+          if (data.ok && data.moderationState && data.moderationState !== item.moderationStatus) {
+            // Update DB
+            await fetch(`/api/history?id=${item.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ 
+                moderationStatus: data.moderationState, 
+                moderationReason: data.moderationReason || null 
+              }),
+            });
+            
+            // Update local state
+            const idx = newItems.findIndex((i) => i.id === item.id);
+            if (idx !== -1) {
+              newItems[idx] = { 
+                ...newItems[idx], 
+                moderationStatus: data.moderationState,
+                moderationReason: data.moderationReason || null
+              };
+              updated = true;
+            }
+          }
+        } catch (e) {
+          console.error("Failed to poll history item", e);
+        }
+      }
+
+      if (updated) {
+        setItems(newItems);
+      }
+    }, 10000); // Poll every 10s
+
+    return () => clearInterval(interval);
+  }, [items, account]);
 
   const handleDelete = async (id: string) => {
     try {

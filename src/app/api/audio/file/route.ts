@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readAudioFile, getAudioFileStat } from "@/lib/audio-processor";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 /** GET /api/audio/file?name=xxx&type=processed|upload
  * Streams audio file with range support.

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getOperationStatus, getAssetModerationStatus } from "@/lib/roblox-api";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 /** GET /api/roblox/status?apiKey=xxx&operationId=yyy

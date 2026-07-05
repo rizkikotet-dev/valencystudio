@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: valency-studio
+    env: docker
+    plan: free
+    region: singapore
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        value: file:./db/prod.db
+    disk:
+      name: sqlite-data
+      mountPath: /app/prisma/db
+      sizeGB: 1

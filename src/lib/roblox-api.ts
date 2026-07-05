@@ -58,13 +58,14 @@ export interface RobloxStatusResult {
 /** Fetch a Roblox user's public profile (no auth required) */
 async function fetchRobloxUser(userId: number): Promise<RobloxUser | null> {
   try {
-    const res = await fetch(`https://users.roblox.com/v1/users/${userId}`);
+    const res = await fetch(`https://users.roblox.com/v1/users/${userId}`, { cache: "no-store" });
     if (!res.ok) return null;
     const j = await res.json();
     let avatarUrl: string | undefined;
     try {
       const thumbRes = await fetch(
         `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png&isCircular=true`,
+        { cache: "no-store" }
       );
       if (thumbRes.ok) {
         const thumbJson = await thumbRes.json();
@@ -88,6 +89,7 @@ async function verifyApiKey(apiKey: string): Promise<boolean> {
   try {
     const res = await fetch(`https://apis.roblox.com/assets/v1/operations/verify-${Date.now()}`, {
       headers: { "x-api-key": apiKey },
+      cache: "no-store",
     });
     if (res.status === 401 || res.status === 403) return false;
     return true;
@@ -190,6 +192,7 @@ export async function createAudioAsset(params: RobloxCreateParams): Promise<Robl
         "Content-Length": String(body.length),
       },
       body,
+      cache: "no-store",
     });
   } catch (e) {
     return { ok: false, error: `Gagal terhubung ke Roblox API: ${(e as Error).message}` };
@@ -237,6 +240,7 @@ export async function getOperationStatus(
   try {
     const res = await fetch(`https://apis.roblox.com/assets/v1/operations/${operationId}`, {
       headers: { "x-api-key": apiKey },
+      cache: "no-store",
     });
 
     if (res.status === 401 || res.status === 403) {
@@ -280,6 +284,7 @@ export async function getAssetModerationStatus(
   try {
     const res = await fetch(`https://apis.roblox.com/assets/v1/assets/${assetId}`, {
       headers: { "x-api-key": apiKey },
+      cache: "no-store",
     });
 
     if (res.status === 401 || res.status === 403) {
