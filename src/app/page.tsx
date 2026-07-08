@@ -9,6 +9,7 @@ import { RobloxPanel } from "@/components/roblox-panel";
 import { HistoryList } from "@/components/history-list";
 import { PreviewList } from "@/components/preview-list";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { UserMenu } from "@/components/user-menu";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -47,6 +48,7 @@ export default function Home() {
             >
               <Github className="h-4 w-4" />
             </a>
+            <UserMenu />
             <ThemeToggle />
           </nav>
         </div>
