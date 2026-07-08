@@ -3,9 +3,9 @@
   "version": "0.2.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3000 2>&1 | tee dev.log",
+    "dev": "node scripts/check-ytdlp.mjs && next dev -p 3000 2>&1 | tee dev.log",
     "build": "prisma generate && next build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
-    "start": "NODE_ENV=production prisma db push && bun .next/standalone/server.js 2>&1 | tee server.log",
+    "start": "node scripts/check-ytdlp.mjs && NODE_ENV=production prisma db push && bun .next/standalone/server.js 2>&1 | tee server.log",
     "lint": "eslint .",
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
