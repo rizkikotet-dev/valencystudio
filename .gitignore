@@ -51,5 +51,23 @@ test
 prompt
 
 server.log
+
+# ruflo runtime state (auto-generated)
+.claude-flow/
+.swarm/
+.claude/helpers/
+.claude/commands/
+.claude/agents/
+.claude/.proven-config-version
+.claude/proven-config.json
+.claude/settings.local.json
+
+# Audio temp files
+.tmp-audio/
+
+# yt-dlp binary (user-downloaded, not committed)
+yt-dlp
+yt-dlp.exe
+
 # Skills directory
 /skills/

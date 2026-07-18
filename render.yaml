@@ -10,6 +10,22 @@ services:
         value: production
       - key: DATABASE_URL
         value: file:./db/prod.db
+      - key: AUTH_SECRET
+        sync: false
+      - key: AUTH_DISCORD_ID
+        sync: false
+      - key: AUTH_DISCORD_SECRET
+        sync: false
+      - key: BOT_TOKEN
+        sync: false
+      - key: GUILD_ID
+        sync: false
+      - key: LOG_CHANNEL_ID
+        sync: false
+      - key: STATUS_CHANNEL_ID
+        sync: false
+      - key: WELCOME_CHANNEL_ID
+        sync: false
     disk:
       name: sqlite-data
       mountPath: /app/prisma/db
