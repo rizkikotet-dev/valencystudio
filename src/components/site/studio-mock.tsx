@@ -13,6 +13,7 @@ import {
   Volume2,
 } from "lucide-react";
 import { useLocale } from "@/hooks/use-locale";
+import { useStats } from "@/hooks/use-site-data";
 import { formatNumber } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -177,6 +178,7 @@ export function StudioMock() {
   const [activeRow, setActiveRow] = useState(0);
   const [scanned, setScanned] = useState(1240);
   const { locale, t } = useLocale();
+  const { stats } = useStats();
 
   // Cycle the "scanning" highlight through the queue rows.
   useEffect(() => {
@@ -211,7 +213,7 @@ export function StudioMock() {
             <span className="size-2.5 rounded-full bg-primary/70" />
           </div>
           <div className="flex-1 text-center font-mono text-[11px] text-muted-foreground truncate">
-            ValencyStudio — Spoofer <span className="opacity-50">· v3.0.2</span>
+            ValencyStudio — Spoofer <span className="opacity-50">· {stats.release.tag}</span>
           </div>
           <div className="flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px] tracking-wider">
             <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse-dot" />

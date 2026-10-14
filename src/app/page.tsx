@@ -62,7 +62,6 @@ export default function Home() {
         <Changelog />
         <Contributors />
         <Faq />
-        <Cta />
       </main>
       <Footer />
       <CommandPalette />
