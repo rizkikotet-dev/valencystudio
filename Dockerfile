@@ -35,7 +35,7 @@ COPY . .
 RUN bun run db:generate
 
 # Build the Next.js application.
-RUN bun run build
+RUN bun run build:next
 
 
 # ============================================================
