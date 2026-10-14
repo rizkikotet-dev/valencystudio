@@ -599,3 +599,38 @@ Unresolved / next-phase recommendations (priority order):
 2. GITHUB_TOKEN env (rate-limited in 3 of the last 4 QA rounds; fallback covers it but live data is better for charts).
 3. Optional: Discord wall (needs server ID), screenshot gallery of the real app, "compare versions" tool, sitemap lastmod from release dates.
 4. A11y: prefers-contrast has no automation hook — do one manual check with OS high-contrast enabled; audit chart zero-label contrast under the new variables.
+---
+Task ID: R8 (cron review round 8)
+Agent: orchestrator (Z.ai Code)
+Task: Status assessment, browser QA, dynamic OG image with live stats, sitemap lastmod from releases, styling detail pass (color-scheme/accent-color/contrast), html lang sync
+
+Work Log — Assessment & QA:
+- Baseline healthy at round start (lint 0, all 9 routes 200). GitHub rate-limited again — fallback paths exercised everywhere (OG card shows "—" downloads + muted live dot, sitemap uses hardcoded changelog date, chart correctly hidden at 0 downloads).
+- No page bugs found. Browser QA (dark+light × EN+ID × 1280+390): zero console errors; navbar single-line; ID changelog with TERBARU chip + copy buttons renders clean on mobile; browser closed after QA (RAM 2.6GB/4GB).
+
+Work Log — Features:
+- DYNAMIC OG IMAGE (src/app/opengraph-image.tsx): 1200×630 brand card rendered per-request with next/og (satori). Design mirrors the site language — blueprint grid, ember top hairline + radial glow, corner ticks, VS mark, JetBrains Mono labels, Space Grotesk headline ("Every asset in your place, found and replaced in one pass." with ember highlight), release chip (v3.0.2 · LATEST with live/cached dot), and a 4-card stat row (STARS/DOWNLOADS/LATEST/LICENSE) fed by the fail-safe GitHub client. Brand fonts are real static TTFs (Space Grotesk 500/700, JetBrains Mono 400/600) checked into src/app/og-fonts/ (downloaded via the Google Fonts css2 API with a plain-curl UA — the old-MSIE UA serves EOT which satori rejects). Exact hex palette derived from the theme's oklch tokens via a node one-liner (ember #f75700, bg #0c0a09, fg #f1f0ee, muted #9a9894 — documented in the file). FAIL-SAFE: render errors fall back to serving the static public/og.png; GitHub failures degrade to fallback stats. Removed the manual openGraph.images/twitter.images from layout.tsx — the file convention now injects og:image + twitter:image (+ alt/width/height/type) automatically; verified both meta sets in the served head. SATORI GOTCHA (cost ~1h, documented): satori throws "Expected <div> to have explicit display:flex" when raw children are NOT a plain string — a div with `{expr} · text` compiles to a 2-element array and trips it even though it LOOKS like one text run. Root-caused via server-side bisect + a temporary tree-walker that mirrored satori's exact throw condition; fix = display:flex on the chip's text div (comment left in code). Offline repro with createElement passed while dev failed precisely because of this string-vs-array shape difference.
+- SITEMAP LASTMOD (R7 rec): sitemap.ts now async — lastModified tracks the newest release date (stable across crawls) using fetchReleases(), falling back to the hardcoded changelog (v3.0.2 → 2026-10-13) when GitHub is unreachable, and only to new Date() as last resort. fetchReleases() returns [] instead of throwing on failure, so the fallback pool selection is explicit (releases.length check), not a try/catch.
+
+Work Log — Styling details:
+- color-scheme: light on :root / dark on .dark — native scrollbars, form controls, and UA widgets now match the active theme.
+- accent-color: var(--ember) on html — checkboxes/radios/progress/meter pick up the brand accent.
+- Chart zero-label contrast bumped (R7 rec): text-muted-foreground/65 → /75 for the 9px zero numerals in downloads-chart.tsx.
+- <html lang> now syncs with the locale switcher (useEffect in LocaleAnnouncer): server ships lang="en", client updates to "id" on switch — screen readers switch pronunciation. Verified live: lang attribute flips en ↔ id with localStorage locale.
+
+Verification:
+- bun run lint exit 0; tsc --noEmit 0 project-src errors (the only hit is the pre-existing skills/stock-analysis-skill error, outside the project).
+- All 10 routes 200: /, /robots.txt, /sitemap.xml, /manifest.webmanifest, /feed.xml, /feed.json, /opengraph-image (NEW), 3 APIs.
+- OG image verified visually (screenshot): on-brand card, correct fallback data (STARS 1, DOWNLOADS —, LATEST v3.0.2, LICENSE GPL-3.0, muted live dot); meta tags verified in head.
+- Sitemap lastmod verified = 2026-10-13 (release-derived, not "now") under GitHub rate limiting.
+- Browser QA: zero console errors in dark/light × EN/ID × desktop/mobile; html lang sync verified both directions; DB clean (0 subscribers / 0 download events).
+
+Stage Summary:
+- Social sharing now renders a live, on-brand card instead of a static file, search engines get honest lastmod dates, and native UI chrome follows the theme. The satori flex-rule gotcha and its fix are documented for future OG work.
+- NOTE: SITE_URL placeholder still stands (src/lib/site.ts) — og:image URLs in meta resolve against metadataBase, so the real domain will flow through automatically at deploy.
+
+Unresolved / next-phase recommendations (priority order):
+1. Set real deploy domain in src/lib/site.ts at launch (metadataBase + robots + sitemap + og:image URLs follow).
+2. GITHUB_TOKEN env (rate-limited in 4 of the last 5 QA rounds; all fallback paths now proven, but live data makes charts/OG richer).
+3. Optional features: "compare versions" tool, per-release OG cards (/opengraph-image/[tag]), Discord wall (needs server ID), screenshot gallery.
+4. A11y: manual prefers-contrast check with OS high-contrast on; verify OG alt/contrast under sunlight conditions is n/a — remaining: audit tab order through mobile menu, and consider honoring prefers-color-scheme for first-visit theme (currently dark-locked by design).

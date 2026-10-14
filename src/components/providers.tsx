@@ -16,6 +16,12 @@ function LocaleAnnouncer() {
   const [message, setMessage] = useState("");
   const hydrated = useRef(false);
 
+  // Keep <html lang> in sync so screen readers switch pronunciation when the
+  // visitor changes language (the server always ships lang="en").
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
+
   useEffect(() => {
     if (!hydrated.current) {
       hydrated.current = true;

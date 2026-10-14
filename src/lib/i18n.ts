@@ -40,6 +40,8 @@ const en = {
   "a11y.subscribeForm": "Subscribe for updates",
   "a11y.backToTop": "Back to top",
   "a11y.copyReleaseLink": "Copy release link",
+  "a11y.toggleAssets": "Show or hide installer files",
+  "a11y.downloadFile": "Download {name}",
   "a11y.toggleNode": "Toggle {name}",
 
   /* Hero */
@@ -180,6 +182,8 @@ const en = {
   "changelog.downloadsUnit": "downloads",
   "changelog.byPlatform": "stacked by platform",
   "changelog.cachedNote": "last synced data — refreshes automatically",
+  "changelog.assets": "Installer files",
+  "changelog.assetsCount": "{count} files",
 
   /* Contributors / community */
   "contributors.eyebrow": "Community",
@@ -355,6 +359,8 @@ const id: typeof en = {
   "a11y.subscribeForm": "Berlangganan pembaruan",
   "a11y.backToTop": "Kembali ke atas",
   "a11y.copyReleaseLink": "Salin tautan rilis",
+  "a11y.toggleAssets": "Tampilkan atau sembunyikan berkas instalasi",
+  "a11y.downloadFile": "Unduh {name}",
   "a11y.toggleNode": "Buka/tutup {name}",
 
   /* Hero */
@@ -495,6 +501,8 @@ const id: typeof en = {
   "changelog.downloadsUnit": "unduhan",
   "changelog.byPlatform": "bertumpuk per platform",
   "changelog.cachedNote": "data tersinkron terakhir — diperbarui otomatis",
+  "changelog.assets": "Berkas instalasi",
+  "changelog.assetsCount": "{count} berkas",
 
   /* Kontributor / komunitas */
   "contributors.eyebrow": "Komunitas",
@@ -671,6 +679,26 @@ export function translate(
 /** Locale-aware number formatting (1,234 vs 1.234). */
 export function formatNumber(n: number, locale: Locale): string {
   return new Intl.NumberFormat(locale === "id" ? "id-ID" : "en-US").format(n);
+}
+
+/**
+ * Locale-aware byte size ("182.4 MB" / "182,4 MB"). Returns "" for unknown
+ * (0 / non-finite) sizes so callers can hide the chip entirely.
+ */
+export function formatBytes(bytes: number, locale: Locale): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "";
+  const units = ["B", "KB", "MB", "GB"];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit++;
+  }
+  const precise = unit > 0 && value < 10;
+  return `${new Intl.NumberFormat(locale === "id" ? "id-ID" : "en-US", {
+    minimumFractionDigits: precise ? 1 : 0,
+    maximumFractionDigits: precise ? 1 : 0,
+  }).format(value)} ${units[unit]}`;
 }
 
 /** Locale-aware short date ("Oct 13, 2026" vs "13 Okt 2026"); "—" when invalid. */

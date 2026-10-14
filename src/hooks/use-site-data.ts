@@ -16,6 +16,16 @@ export interface ReleaseAsset {
   downloads: number;
 }
 
+/** Installer asset in a changelog release (mirrors the API contract). */
+export interface ChangelogAsset {
+  platform: Platform;
+  name: string;
+  url: string;
+  /** File size in bytes (0 when unknown — e.g. fallback data). */
+  size: number;
+  downloads: number;
+}
+
 export interface StatsResponse {
   github: { stars: number; forks: number; watchers: number; openIssues: number };
   release: {
@@ -40,6 +50,8 @@ export interface ChangelogRelease {
   downloads: number;
   /** Per-platform asset breakdown (installers only). Absent on fallback data. */
   platforms?: { windows: number; macos: number; linux: number };
+  /** Installer assets with size (bytes) for direct downloads. Absent on older cached shapes. */
+  assets?: ChangelogAsset[];
 }
 
 export interface ChangelogResponse {
@@ -102,6 +114,29 @@ export const FALLBACK_CHANGELOG: ChangelogResponse = {
       url: `${REPO_URL}/releases/tag/v3.0.2`,
       notes: "See the release page for the full changelog.",
       downloads: 0,
+      assets: [
+        {
+          platform: "windows",
+          name: "ValencyStudio - Spoofer_3.0.2_x64-setup.exe",
+          url: RELEASES_URL,
+          size: 0,
+          downloads: 0,
+        },
+        {
+          platform: "macos",
+          name: "ValencyStudio - Spoofer_3.0.2_x64.dmg",
+          url: RELEASES_URL,
+          size: 0,
+          downloads: 0,
+        },
+        {
+          platform: "linux",
+          name: "ValencyStudio - Spoofer_3.0.2_amd64.AppImage",
+          url: RELEASES_URL,
+          size: 0,
+          downloads: 0,
+        },
+      ],
     },
     {
       tag: "v3.0.1",
@@ -110,6 +145,7 @@ export const FALLBACK_CHANGELOG: ChangelogResponse = {
       url: `${REPO_URL}/releases/tag/v3.0.1`,
       notes: "See the release page for the full changelog.",
       downloads: 0,
+      assets: [],
     },
     {
       tag: "v2.5.0",
@@ -118,6 +154,7 @@ export const FALLBACK_CHANGELOG: ChangelogResponse = {
       url: `${REPO_URL}/releases/tag/v2.5.0`,
       notes: "See the release page for the full changelog.",
       downloads: 0,
+      assets: [],
     },
     {
       tag: "v2.4.0",
@@ -126,6 +163,7 @@ export const FALLBACK_CHANGELOG: ChangelogResponse = {
       url: `${REPO_URL}/releases/tag/v2.4.0`,
       notes: "See the release page for the full changelog.",
       downloads: 0,
+      assets: [],
     },
   ],
   source: "fallback",

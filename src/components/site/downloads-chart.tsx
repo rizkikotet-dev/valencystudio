@@ -79,7 +79,7 @@ export function DownloadsChart() {
               <span
                 className={
                   isZero
-                    ? "font-mono text-[9px] tabular-nums text-muted-foreground/65"
+                    ? "font-mono text-[9px] tabular-nums text-muted-foreground/75"
                     : "font-mono text-[9px] font-semibold tabular-nums text-foreground/90 sm:text-[10px]"
                 }
               >

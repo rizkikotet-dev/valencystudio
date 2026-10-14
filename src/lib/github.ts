@@ -51,6 +51,20 @@ export interface ChangelogRelease {
    * checksums excluded). Absent for fallback entries and older cached shapes.
    */
   platforms?: { windows: number; macos: number; linux: number };
+  /**
+   * Installer assets with file size (bytes) for direct per-release downloads.
+   * Absent for older cached shapes; empty for releases without installers.
+   */
+  assets?: ChangelogAsset[];
+}
+
+export interface ChangelogAsset {
+  platform: AssetPlatform;
+  name: string;
+  url: string;
+  /** File size in bytes (0 when unknown — e.g. fallback data). */
+  size: number;
+  downloads: number;
 }
 
 export interface ReleasesResult {
@@ -91,6 +105,7 @@ interface GhAsset {
   name?: string;
   browser_download_url?: string;
   download_count?: number;
+  size?: number;
 }
 
 interface GhRelease {
@@ -142,6 +157,29 @@ export const FALLBACK_RELEASES: ChangelogRelease[] = [
     url: `${RELEASES_PAGE_URL}/tag/v3.0.2`,
     notes: "See the release page for the full changelog.",
     downloads: 0,
+    assets: [
+      {
+        platform: "windows",
+        name: "ValencyStudio - Spoofer_3.0.2_x64-setup.exe",
+        url: `${RELEASES_PAGE_URL}/latest`,
+        size: 0,
+        downloads: 0,
+      },
+      {
+        platform: "macos",
+        name: "ValencyStudio - Spoofer_3.0.2_x64.dmg",
+        url: `${RELEASES_PAGE_URL}/latest`,
+        size: 0,
+        downloads: 0,
+      },
+      {
+        platform: "linux",
+        name: "ValencyStudio - Spoofer_3.0.2_amd64.AppImage",
+        url: `${RELEASES_PAGE_URL}/latest`,
+        size: 0,
+        downloads: 0,
+      },
+    ],
   },
   {
     tag: "v3.0.1",
@@ -150,6 +188,7 @@ export const FALLBACK_RELEASES: ChangelogRelease[] = [
     url: `${RELEASES_PAGE_URL}/tag/v3.0.1`,
     notes: "See the release page for the full changelog.",
     downloads: 0,
+    assets: [],
   },
   {
     tag: "v2.5.0",
@@ -158,6 +197,7 @@ export const FALLBACK_RELEASES: ChangelogRelease[] = [
     url: `${RELEASES_PAGE_URL}/tag/v2.5.0`,
     notes: "See the release page for the full changelog.",
     downloads: 0,
+    assets: [],
   },
   {
     tag: "v2.4.0",
@@ -166,6 +206,7 @@ export const FALLBACK_RELEASES: ChangelogRelease[] = [
     url: `${RELEASES_PAGE_URL}/tag/v2.4.0`,
     notes: "See the release page for the full changelog.",
     downloads: 0,
+    assets: [],
   },
 ];
 
@@ -397,13 +438,22 @@ export async function fetchReleases(): Promise<ReleasesResult> {
       const tag = release.tag_name ?? "";
       const assets = Array.isArray(release.assets) ? release.assets : [];
       const platforms = { windows: 0, macos: 0, linux: 0 };
+      const installerAssets: ChangelogAsset[] = [];
       let downloads = 0;
       for (const asset of assets) {
         const count =
           typeof asset.download_count === "number" ? asset.download_count : 0;
         downloads += count;
         const platform = classifyAsset(asset.name ?? "");
-        if (platform) platforms[platform] += count;
+        if (!platform) continue;
+        platforms[platform] += count;
+        installerAssets.push({
+          platform,
+          name: asset.name ?? "",
+          url: asset.browser_download_url ?? RELEASES_PAGE_URL,
+          size: typeof asset.size === "number" ? asset.size : 0,
+          downloads: count,
+        });
       }
       return {
         tag,
@@ -413,6 +463,7 @@ export async function fetchReleases(): Promise<ReleasesResult> {
         notes: capNotes(stripMarkdownToPlainText(release.body ?? "")),
         downloads,
         platforms,
+        assets: installerAssets,
       };
     });
     const result: ReleasesResult = { releases, source: "github" };
