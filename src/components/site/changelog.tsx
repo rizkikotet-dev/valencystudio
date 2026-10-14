@@ -1,20 +1,17 @@
 "use client";
 
-import { ArrowUpRight, Tag } from "lucide-react";
+import { ArrowUpRight, Download, Tag } from "lucide-react";
 import { SectionHeading } from "@/components/site/section-heading";
 import { Reveal } from "@/components/site/reveal";
+import { DownloadsChart } from "@/components/site/downloads-chart";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useChangelog } from "@/hooks/use-site-data";
-
-function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-}
+import { useLocale } from "@/hooks/use-locale";
+import { formatDate, formatNumber } from "@/lib/i18n";
 
 export function Changelog() {
   const { releases, isLoading, isFetching } = useChangelog();
+  const { locale, t } = useLocale();
   const loading = isLoading || (isFetching && releases.length === 0);
 
   return (
@@ -22,9 +19,9 @@ export function Changelog() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <SectionHeading
           index="05"
-          eyebrow="Changelog"
-          title="Release history"
-          description="Pulled live from GitHub releases. The Studio plugin ships inside every desktop release, so one download always matches one plugin version."
+          eyebrow={t("nav.changelog")}
+          title={t("changelog.title")}
+          description={t("changelog.description")}
         />
 
         <Reveal className="mt-12 sm:mt-16">
@@ -63,12 +60,18 @@ export function Changelog() {
                         </h3>
                         {i === 0 ? (
                           <span className="rounded-full bg-primary/15 border border-primary/40 px-2 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-[0.16em] text-primary">
-                            Latest
+                            {t("changelog.latest")}
                           </span>
                         ) : null}
                         <span className="font-mono text-[11px] text-muted-foreground">
-                          {formatDate(release.publishedAt)}
+                          {formatDate(release.publishedAt, locale)}
                         </span>
+                        {release.downloads > 0 ? (
+                          <span className="inline-flex items-center gap-1 font-mono text-[11px] tabular-nums text-muted-foreground/80">
+                            <Download className="size-3" aria-hidden />
+                            {formatNumber(release.downloads, locale)}
+                          </span>
+                        ) : null}
                       </div>
                       {release.notes ? (
                         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground whitespace-pre-line">
@@ -82,13 +85,17 @@ export function Changelog() {
                         className="group mt-2.5 inline-flex items-center gap-1 font-mono text-[11px] text-muted-foreground transition-colors hover:text-primary"
                       >
                         <Tag className="size-3" />
-                        View release
+                        {t("changelog.viewRelease")}
                         <ArrowUpRight className="size-3 transition-transform group-hover:translate-x-px group-hover:-translate-y-px" />
                       </a>
                     </div>
                   </li>
                 ))}
             </ol>
+        </Reveal>
+
+        <Reveal delay={0.08}>
+          <DownloadsChart />
         </Reveal>
       </div>
     </section>

@@ -64,12 +64,12 @@
   --secondary: oklch(0.955 0.004 85);
   --secondary-foreground: oklch(0.24 0.006 60);
   --muted: oklch(0.955 0.004 85);
-  --muted-foreground: oklch(0.5 0.008 60);
+  --muted-foreground: oklch(0.455 0.01 60);
   --accent: oklch(0.945 0.012 70);
   --accent-foreground: oklch(0.3 0.06 41);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.9 0.005 75);
-  --input: oklch(0.9 0.005 75);
+  --border: oklch(0.885 0.006 75);
+  --input: oklch(0.885 0.006 75);
   --ring: oklch(0.575 0.213 41.1);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
@@ -131,6 +131,12 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+  }
+  /* Consistent, accessible focus ring in the ember accent */
+  *:focus-visible {
+    outline: 2px solid color-mix(in oklab, var(--ember) 75%, transparent);
+    outline-offset: 3px;
+    border-radius: 2px;
   }
   html {
     scroll-behavior: smooth;
@@ -221,6 +227,15 @@
   /* Pause the marquee while the visitor hovers the strip */
   .marquee-hover-pause:hover > .animate-marquee {
     animation-play-state: paused;
+  }
+  /* Shared card hover treatment: lift + ember edge + soft glow */
+  .card-hover-glow {
+    transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  .card-hover-glow:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in oklab, var(--ember) 38%, var(--border));
+    box-shadow: 0 14px 44px -20px color-mix(in oklab, var(--ember) 42%, transparent);
   }
 }
 

@@ -3,37 +3,36 @@
 import Image from "next/image";
 import { Github, MessageCircle, Radio } from "lucide-react";
 import { DISCORD_URL, REPO_URL, RELEASES_URL, useStats } from "@/hooks/use-site-data";
+import { useLocale } from "@/hooks/use-locale";
+import { formatDate } from "@/lib/i18n";
 
 const RESOURCE_LINKS = [
-  { href: REPO_URL, label: "GitHub repository" },
-  { href: RELEASES_URL, label: "Releases" },
+  { href: REPO_URL, labelKey: "footer.linkRepo" },
+  { href: RELEASES_URL, labelKey: "footer.linkReleases" },
   {
     href: `${REPO_URL}/issues/new?template=bug_report.md`,
-    label: "Report a bug",
+    labelKey: "footer.linkBug",
   },
   {
     href: `${REPO_URL}/issues/new?template=feature_request.md`,
-    label: "Request a feature",
+    labelKey: "footer.linkFeature",
   },
-  { href: DISCORD_URL, label: "Discord community" },
-];
+  { href: DISCORD_URL, labelKey: "footer.linkDiscord" },
+] as const;
 
 const SITE_LINKS = [
-  { href: "#how-it-works", label: "How it works" },
-  { href: "#features", label: "Features" },
-  { href: "#download", label: "Download" },
-  { href: "#changelog", label: "Changelog" },
-  { href: "#faq", label: "FAQ" },
-];
+  { href: "#how-it-works", labelKey: "nav.howItWorks" },
+  { href: "#features", labelKey: "nav.features" },
+  { href: "#download", labelKey: "nav.download" },
+  { href: "#changelog", labelKey: "nav.changelog" },
+  { href: "#faq", labelKey: "nav.faq" },
+] as const;
 
 export function Footer() {
   const { stats } = useStats();
+  const { locale, t } = useLocale();
   const releaseDate = stats.release.publishedAt
-    ? new Date(stats.release.publishedAt).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })
+    ? formatDate(stats.release.publishedAt, locale)
     : null;
 
   return (
@@ -60,8 +59,7 @@ export function Footer() {
               </span>
             </a>
             <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
-              A desktop asset replacement tool for Roblox Studio. Preview, replace, and push
-              assets across an entire place — without manually editing instances.
+              {t("footer.description")}
             </p>
             <p className="font-mono text-[11px] text-muted-foreground/70">
               Tauri 2 · Rust · React 19 · Luau
@@ -89,20 +87,20 @@ export function Footer() {
           </div>
 
           {/* Resources */}
-          <nav aria-label="Resources">
+          <nav aria-label={t("footer.resources")}>
             <h3 className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-              Resources
+              {t("footer.resources")}
             </h3>
             <ul className="mt-4 space-y-2.5">
               {RESOURCE_LINKS.map((link) => (
-                <li key={link.label}>
+                <li key={link.labelKey}>
                   <a
                     href={link.href}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                   >
-                    {link.label}
+                    {t(link.labelKey)}
                   </a>
                 </li>
               ))}
@@ -110,18 +108,18 @@ export function Footer() {
           </nav>
 
           {/* Site */}
-          <nav aria-label="Site">
+          <nav aria-label={t("footer.explore")}>
             <h3 className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-              Explore
+              {t("footer.explore")}
             </h3>
             <ul className="mt-4 space-y-2.5">
               {SITE_LINKS.map((link) => (
-                <li key={link.label}>
+                <li key={link.labelKey}>
                   <a
                     href={link.href}
                     className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                   >
-                    {link.label}
+                    {t(link.labelKey)}
                   </a>
                 </li>
               ))}
@@ -134,8 +132,10 @@ export function Footer() {
           <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] text-muted-foreground/70">
             <Radio className={"size-3 " + (stats.source === "github" ? "text-emerald-500" : "text-muted-foreground/50")} />
             <span>
-              {stats.source === "github" ? "Live from GitHub API" : "Serving cached data — refreshes automatically"}
-              {releaseDate ? ` · release ${stats.release.tag} · ${releaseDate}` : ""}
+              {stats.source === "github" ? t("footer.liveFromApi") : t("footer.cachedData")}
+              {releaseDate
+                ? ` · ${t("footer.releaseMeta", { tag: stats.release.tag, date: releaseDate })}`
+                : ""}
             </span>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -147,12 +147,11 @@ export function Footer() {
               rel="noopener noreferrer"
               className="underline underline-offset-2 hover:text-foreground"
             >
-              License
+              {t("stats.license")}
             </a>
           </p>
           <p className="max-w-md font-mono text-[10px] leading-relaxed text-muted-foreground/60 sm:text-right">
-            Not affiliated with or endorsed by Roblox Corporation. “Roblox” and “Roblox Studio”
-            are trademarks of Roblox Corporation.
+            {t("footer.disclaimer")}
           </p>
           </div>
         </div>

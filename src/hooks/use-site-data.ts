@@ -36,11 +36,14 @@ export interface ChangelogRelease {
   publishedAt: string | null;
   url: string;
   notes: string;
+  downloads: number;
 }
 
 export interface ChangelogResponse {
   releases: ChangelogRelease[];
   source: "github" | "fallback";
+  /** True when served from the client-side last-good cache during a GitHub rate-limit window. */
+  stale?: boolean;
 }
 
 /* ------------------------------------------------------------------ */
@@ -95,6 +98,7 @@ export const FALLBACK_CHANGELOG: ChangelogResponse = {
       publishedAt: "2026-10-13",
       url: `${REPO_URL}/releases/tag/v3.0.2`,
       notes: "See the release page for the full changelog.",
+      downloads: 0,
     },
     {
       tag: "v3.0.1",
@@ -102,6 +106,7 @@ export const FALLBACK_CHANGELOG: ChangelogResponse = {
       publishedAt: null,
       url: `${REPO_URL}/releases/tag/v3.0.1`,
       notes: "See the release page for the full changelog.",
+      downloads: 0,
     },
     {
       tag: "v2.5.0",
@@ -109,6 +114,7 @@ export const FALLBACK_CHANGELOG: ChangelogResponse = {
       publishedAt: null,
       url: `${REPO_URL}/releases/tag/v2.5.0`,
       notes: "See the release page for the full changelog.",
+      downloads: 0,
     },
     {
       tag: "v2.4.0",
@@ -116,6 +122,7 @@ export const FALLBACK_CHANGELOG: ChangelogResponse = {
       publishedAt: null,
       url: `${REPO_URL}/releases/tag/v2.4.0`,
       notes: "See the release page for the full changelog.",
+      downloads: 0,
     },
   ],
   source: "fallback",
@@ -143,10 +150,61 @@ export function useStats() {
 export function useChangelog() {
   const query = useQuery<ChangelogResponse>({
     queryKey: ["changelog"],
-    queryFn: () => fetchJson<ChangelogResponse>("/api/changelog"),
+    queryFn: fetchChangelog,
     refetchInterval: 120_000,
   });
   return { ...query, releases: query.data?.releases ?? FALLBACK_CHANGELOG.releases };
+}
+
+/*
+ * Release history is immutable historical data, so the last good live
+ * response is persisted client-side. During GitHub rate-limit windows the
+ * site keeps showing the synced releases (flagged `stale`) instead of
+ * dropping the downloads chart until the window resets.
+ */
+const CHANGELOG_CACHE_KEY = "vs-changelog-cache";
+const CHANGELOG_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+function readChangelogCache(): ChangelogResponse | null {
+  try {
+    const raw = window.localStorage.getItem(CHANGELOG_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { fetchedAt: number; releases: ChangelogRelease[] };
+    if (
+      typeof parsed?.fetchedAt !== "number" ||
+      !Array.isArray(parsed?.releases) ||
+      Date.now() - parsed.fetchedAt > CHANGELOG_CACHE_MAX_AGE_MS ||
+      !parsed.releases.some((r) => (r?.downloads ?? 0) > 0)
+    ) {
+      return null;
+    }
+    return { releases: parsed.releases, source: "github", stale: true };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchChangelog(): Promise<ChangelogResponse> {
+  try {
+    const res = await fetch("/api/changelog");
+    if (res.ok) {
+      const data = (await res.json()) as ChangelogResponse;
+      if (data.source === "github" && data.releases.length > 0) {
+        try {
+          window.localStorage.setItem(
+            CHANGELOG_CACHE_KEY,
+            JSON.stringify({ fetchedAt: Date.now(), releases: data.releases })
+          );
+        } catch {
+          /* storage unavailable — live data still renders */
+        }
+        return data;
+      }
+    }
+  } catch {
+    /* network error — fall through to cache/fallback */
+  }
+  return readChangelogCache() ?? FALLBACK_CHANGELOG;
 }
 
 export async function postSubscribe(

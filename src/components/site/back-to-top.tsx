@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUp } from "lucide-react";
+import { useLocale } from "@/hooks/use-locale";
 
 export function BackToTop() {
   const [visible, setVisible] = useState(false);
+  const { t } = useLocale();
 
   useEffect(() => {
     const onScroll = () => setVisible(window.scrollY > 700);
@@ -25,7 +27,7 @@ export function BackToTop() {
           exit={{ opacity: 0, y: 12, scale: 0.9 }}
           transition={{ duration: 0.22, ease: "easeOut" }}
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          aria-label="Back to top"
+          aria-label={t("a11y.backToTop")}
           className="fixed bottom-24 right-6 z-40 flex size-11 items-center justify-center rounded-full border bg-card/90 text-muted-foreground shadow-lg backdrop-blur transition-colors hover:text-foreground hover:border-primary/40"
         >
           <ArrowUp className="size-4" />

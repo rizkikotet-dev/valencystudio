@@ -44,6 +44,8 @@ export interface ChangelogRelease {
   publishedAt: string | null;
   url: string;
   notes: string;
+  /** Total download_count across the release's assets (0 for fallback data). */
+  downloads: number;
 }
 
 export interface ReleasesResult {
@@ -332,6 +334,12 @@ export async function fetchReleases(): Promise<ReleasesResult> {
         publishedAt: release.published_at ?? null,
         url: release.html_url ?? `${RELEASES_PAGE_URL}/tag/${tag}`,
         notes: capNotes(stripMarkdownToPlainText(release.body ?? "")),
+        downloads: Array.isArray(release.assets)
+          ? release.assets.reduce(
+              (sum, asset) => sum + (typeof asset.download_count === "number" ? asset.download_count : 0),
+              0,
+            )
+          : 0,
       };
     });
     const result: ReleasesResult = { releases, source: "github" };

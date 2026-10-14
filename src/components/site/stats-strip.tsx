@@ -3,10 +3,13 @@
 import { useEffect, useRef } from "react";
 import { animate } from "framer-motion";
 import { formatDistanceToNowStrict } from "date-fns";
+import { enUS, id as dateFnsId } from "date-fns/locale";
 import { useStats } from "@/hooks/use-site-data";
+import { useLocale } from "@/hooks/use-locale";
+import { formatDate, formatNumber, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-function CountUp({ value }: { value: number }) {
+function CountUp({ value, locale }: { value: number; locale: Locale }) {
   const ref = useRef<HTMLSpanElement>(null);
   const prev = useRef(0);
 
@@ -17,25 +20,27 @@ function CountUp({ value }: { value: number }) {
       duration: 0.9,
       ease: "easeOut",
       onUpdate: (v) => {
-        node.textContent = Math.round(v).toLocaleString("en-US");
+        node.textContent = formatNumber(Math.round(v), locale);
       },
     });
     prev.current = value;
     return () => controls.stop();
-  }, [value]);
+  }, [value, locale]);
 
-  return <span ref={ref} className="tabular-nums">{value.toLocaleString("en-US")}</span>;
+  return <span ref={ref} className="tabular-nums">{formatNumber(value, locale)}</span>;
 }
 
 interface CellProps {
   label: string;
   children: React.ReactNode;
-  sub?: string;
+  sub?: React.ReactNode;
   live?: boolean;
   className?: string;
 }
 
 function Cell({ label, children, sub, live, className }: CellProps) {
+  const { t } = useLocale();
+
   return (
     <div
       className={cn(
@@ -46,7 +51,7 @@ function Cell({ label, children, sub, live, className }: CellProps) {
       <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
         {label}
         {live ? (
-          <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse-dot" title="Live from GitHub API" />
+          <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse-dot" title={t("footer.liveFromApi")} />
         ) : null}
       </div>
       <div className="font-display text-2xl sm:text-3xl font-semibold tracking-tight">{children}</div>
@@ -57,48 +62,48 @@ function Cell({ label, children, sub, live, className }: CellProps) {
 
 export function StatsStrip() {
   const { stats } = useStats();
+  const { locale, t } = useLocale();
 
   const releaseDate = stats.release.publishedAt
-    ? new Date(stats.release.publishedAt).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })
-    : "recent";
+    ? formatDate(stats.release.publishedAt, locale)
+    : t("stats.recent");
 
   const downloads = stats.totals.downloads;
   const commit = stats.lastCommit;
   const commitAgo = commit
-    ? formatDistanceToNowStrict(new Date(commit.date), { addSuffix: true })
+    ? formatDistanceToNowStrict(new Date(commit.date), {
+        addSuffix: true,
+        locale: locale === "id" ? dateFnsId : enUS,
+      })
     : null;
 
   return (
-    <section aria-label="Project stats" className="relative border-y bg-surface/40">
+    <section aria-label={t("a11y.projectStats")} className="relative border-y bg-surface/40">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 divide-y sm:divide-y-0 lg:divide-x divide-border border-x">
-          <Cell label="Latest release" sub={releaseDate} live={stats.source === "github"}>
+          <Cell label={t("stats.latestRelease")} sub={releaseDate} live={stats.source === "github"}>
             <span className="font-mono text-xl sm:text-2xl">{stats.release.tag}</span>
           </Cell>
           <Cell
-            label="Downloads"
-            sub={downloads !== null ? "via GitHub releases" : "counting from GitHub…"}
+            label={t("stats.downloads")}
+            sub={downloads !== null ? t("stats.viaGithubReleases") : t("stats.countingFromGithub")}
             live={stats.source === "github"}
           >
             {downloads !== null ? (
-              <CountUp value={downloads} />
+              <CountUp value={downloads} locale={locale} />
             ) : (
               <span className="text-muted-foreground/50">—</span>
             )}
           </Cell>
           <Cell
-            label="Last commit"
+            label={t("stats.lastCommit")}
             sub={
               commit ? (
                 <span className="block truncate" title={commit.message}>
-                  <span className="text-primary">{commit.sha.slice(0, 7)}</span> on main
+                  <span className="text-primary">{commit.sha.slice(0, 7)}</span> {t("stats.onMain")}
                 </span>
               ) : (
-                "fetching from GitHub…"
+                t("stats.fetchingFromGithub")
               )
             }
             live={!!commit}
@@ -109,10 +114,10 @@ export function StatsStrip() {
               <span className="text-muted-foreground/50">—</span>
             )}
           </Cell>
-          <Cell label="Asset types" sub="Animations · Sounds · Decals · Meshes · Videos">
+          <Cell label={t("stats.assetTypes")} sub={t("stats.assetTypesList")}>
             5
           </Cell>
-          <Cell label="License" sub="Free and open source">
+          <Cell label={t("stats.license")} sub={t("stats.freeOss")}>
             GPL-3.0
           </Cell>
         </div>

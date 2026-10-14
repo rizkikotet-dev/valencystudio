@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import {
   Box,
   Clapperboard,
-  FolderClosed,
   FolderOpen,
   Image as ImageIcon,
   PersonStanding,
@@ -13,6 +12,8 @@ import {
   Search,
   Volume2,
 } from "lucide-react";
+import { useLocale } from "@/hooks/use-locale";
+import { formatNumber } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 /* ------------------------------------------------------------------ */
@@ -27,6 +28,14 @@ const TYPE_ICON: Record<AssetType, React.ComponentType<{ className?: string }>> 
   Decal: ImageIcon,
   Mesh: Box,
   Video: Clapperboard,
+};
+
+const TYPE_KEY: Record<AssetType, string> = {
+  Animation: "type.animation",
+  Sound: "type.sound",
+  Decal: "type.decal",
+  Mesh: "type.mesh",
+  Video: "type.video",
 };
 
 interface QueueRow {
@@ -44,6 +53,12 @@ const QUEUE: QueueRow[] = [
   { type: "Video", current: "6619042310", next: "11092834710", status: "Queued" },
   { type: "Animation", current: "3301927481", next: "14020559912", status: "Applied" },
 ];
+
+const STATUS_KEY: Record<QueueRow["status"], string> = {
+  Applied: "mock.statusApplied",
+  Queued: "mock.statusQueued",
+  Pending: "mock.statusPending",
+};
 
 interface TreeNode {
   name: string;
@@ -93,6 +108,7 @@ function TypeIcon({ type, className }: { type: AssetType; className?: string }) 
 
 function TreeBranch({ nodes, depth = 0 }: { nodes: TreeNode[]; depth?: number }) {
   const [openRoot, setOpenRoot] = useState(true);
+  const { t } = useLocale();
 
   return (
     <ul className={cn("space-y-0.5", depth === 0 && "space-y-1")}>
@@ -115,7 +131,7 @@ function TreeBranch({ nodes, depth = 0 }: { nodes: TreeNode[]; depth?: number })
                   {depth === 0 ? (
                     <button
                       type="button"
-                      aria-label={`Toggle ${node.name}`}
+                      aria-label={t("a11y.toggleNode", { name: node.name })}
                       onClick={() => setOpenRoot((v) => !v)}
                       className="shrink-0 text-muted-foreground/60 hover:text-foreground"
                       tabIndex={-1}
@@ -138,7 +154,7 @@ function TreeBranch({ nodes, depth = 0 }: { nodes: TreeNode[]; depth?: number })
                   <TypeIcon type={node.type as AssetType} className="size-3 shrink-0 opacity-70" />
                   <span className="truncate">{node.name}</span>
                   <span className="ml-auto shrink-0 text-[9px] uppercase tracking-wider opacity-50">
-                    {node.type}
+                    {t(TYPE_KEY[node.type as AssetType])}
                   </span>
                 </>
               )}
@@ -160,6 +176,7 @@ function TreeBranch({ nodes, depth = 0 }: { nodes: TreeNode[]; depth?: number })
 export function StudioMock() {
   const [activeRow, setActiveRow] = useState(0);
   const [scanned, setScanned] = useState(1240);
+  const { locale, t } = useLocale();
 
   // Cycle the "scanning" highlight through the queue rows.
   useEffect(() => {
@@ -198,7 +215,7 @@ export function StudioMock() {
           </div>
           <div className="flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px] tracking-wider">
             <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse-dot" />
-            <span className="text-emerald-600 dark:text-emerald-400">STUDIO CONNECTED</span>
+            <span className="text-emerald-600 dark:text-emerald-400">{t("mock.studioConnected")}</span>
           </div>
         </div>
 
@@ -206,18 +223,18 @@ export function StudioMock() {
         <div className="flex flex-wrap items-center gap-2 border-b bg-background/60 px-4 py-2.5">
           <div className="flex min-w-40 flex-1 items-center gap-2 rounded-md border bg-card px-2.5 py-1.5 text-muted-foreground">
             <Search className="size-3.5 shrink-0" />
-            <span className="font-mono text-[11px]">Search assets…</span>
+            <span className="font-mono text-[11px]">{t("mock.searchAssets")}</span>
             <kbd className="ml-auto hidden sm:block rounded border bg-surface px-1.5 font-mono text-[9px] text-muted-foreground">
               Ctrl K
             </kbd>
           </div>
           <span className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 font-mono text-[11px] font-medium text-primary-foreground">
             <ScanLine className="size-3.5" />
-            Scan place
+            {t("mock.scanPlace")}
           </span>
           <span className="flex items-center gap-1.5 rounded-md border px-3 py-1.5 font-mono text-[11px] text-foreground/80">
             <RefreshCw className="size-3.5" />
-            Replace all
+            {t("mock.replaceAll")}
           </span>
         </div>
 
@@ -226,7 +243,7 @@ export function StudioMock() {
           {/* Asset tree */}
           <div className="hidden md:block border-r bg-surface/60 py-3 min-h-[280px]">
             <div className="px-3 pb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-              Place browser
+              {t("mock.placeBrowser")}
             </div>
             <TreeBranch nodes={TREE} />
           </div>
@@ -239,10 +256,10 @@ export function StudioMock() {
               className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-primary/60 to-transparent animate-scan-line pointer-events-none z-10"
             />
             <div className="grid grid-cols-[74px_1fr_1fr_84px] gap-2 border-b bg-surface/40 px-4 py-2 font-mono text-[9.5px] uppercase tracking-[0.14em] text-muted-foreground">
-              <span>Type</span>
-              <span>Current ID</span>
-              <span className="hidden sm:block">New ID</span>
-              <span className="text-right">Status</span>
+              <span>{t("mock.type")}</span>
+              <span>{t("mock.currentId")}</span>
+              <span className="hidden sm:block">{t("mock.newId")}</span>
+              <span className="text-right">{t("mock.status")}</span>
             </div>
             <ul className="py-1">
               {QUEUE.map((row, i) => (
@@ -259,7 +276,7 @@ export function StudioMock() {
                       className={cn("size-3.5", i === activeRow ? "text-primary" : "opacity-60")}
                     />
                     <span className="hidden xl:inline text-[10px] text-muted-foreground">
-                      {row.type}
+                      {t(TYPE_KEY[row.type])}
                     </span>
                   </span>
                   <span className="text-muted-foreground truncate">
@@ -279,7 +296,7 @@ export function StudioMock() {
                       STATUS_STYLE[row.status]
                     )}
                   >
-                    {row.status}
+                    {t(STATUS_KEY[row.status])}
                   </span>
                 </li>
               ))}
@@ -289,23 +306,20 @@ export function StudioMock() {
 
         {/* Status bar */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t bg-surface px-4 py-2 font-mono text-[10px] text-muted-foreground">
-          <span>
-            <span className="tabular-nums text-foreground/80">{scanned.toLocaleString("en-US")}</span>{" "}
-            instances scanned
+          <span className="tabular-nums">
+            {t("mock.instancesScanned", { count: formatNumber(scanned, locale) })}
           </span>
           <span className="opacity-40" aria-hidden>
             ·
           </span>
-          <span>
-            <span className="text-foreground/80">96</span> assets matched
-          </span>
+          <span>{t("mock.assetsMatched", { count: 96 })}</span>
           <span className="opacity-40" aria-hidden>
             ·
           </span>
-          <span>scan took 2.3s</span>
+          <span>{t("mock.scanTook", { time: "2.3s" })}</span>
           <span className="ml-auto hidden sm:flex items-center gap-1.5">
             <span className="size-1.5 rounded-full bg-primary animate-pulse-dot" />
-            plugin bridge active
+            {t("mock.bridgeActive")}
           </span>
         </div>
       </div>

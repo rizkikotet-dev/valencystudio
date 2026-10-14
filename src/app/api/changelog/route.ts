@@ -12,6 +12,7 @@ const FALLBACK_RELEASES = [
     publishedAt: "2026-10-13",
     url: "https://github.com/valency-studio/valencystudio-spoofer/releases/tag/v3.0.2",
     notes: "See the release page for the full changelog.",
+    downloads: 0,
   },
   {
     tag: "v3.0.1",
@@ -19,6 +20,7 @@ const FALLBACK_RELEASES = [
     publishedAt: null,
     url: "https://github.com/valency-studio/valencystudio-spoofer/releases/tag/v3.0.1",
     notes: "See the release page for the full changelog.",
+    downloads: 0,
   },
   {
     tag: "v2.5.0",
@@ -26,6 +28,7 @@ const FALLBACK_RELEASES = [
     publishedAt: null,
     url: "https://github.com/valency-studio/valencystudio-spoofer/releases/tag/v2.5.0",
     notes: "See the release page for the full changelog.",
+    downloads: 0,
   },
   {
     tag: "v2.4.0",
@@ -33,6 +36,7 @@ const FALLBACK_RELEASES = [
     publishedAt: null,
     url: "https://github.com/valency-studio/valencystudio-spoofer/releases/tag/v2.4.0",
     notes: "See the release page for the full changelog.",
+    downloads: 0,
   },
 ] as const;
 

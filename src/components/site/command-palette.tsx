@@ -27,6 +27,7 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { usePlatform } from "@/hooks/use-platform";
+import { useLocale } from "@/hooks/use-locale";
 import {
   BUG_REPORT_URL,
   DISCORD_URL,
@@ -40,17 +41,18 @@ import {
 export const OPEN_COMMAND_EVENT = "vs:open-command";
 
 const SECTIONS = [
-  { id: "#how-it-works", label: "How it works", icon: ListTree },
-  { id: "#features", label: "Features", icon: MonitorPlay },
-  { id: "#comparison", label: "Manual vs ValencyStudio", icon: Replace },
-  { id: "#download", label: "Download", icon: Download },
-  { id: "#changelog", label: "Changelog", icon: Tags },
-  { id: "#faq", label: "FAQ", icon: HelpCircle },
-];
+  { id: "#how-it-works", labelKey: "nav.howItWorks", icon: ListTree },
+  { id: "#features", labelKey: "nav.features", icon: MonitorPlay },
+  { id: "#comparison", labelKey: "palette.comparison", icon: Replace },
+  { id: "#download", labelKey: "nav.download", icon: Download },
+  { id: "#changelog", labelKey: "nav.changelog", icon: Tags },
+  { id: "#faq", labelKey: "nav.faq", icon: HelpCircle },
+] as const;
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
+  const { t } = useLocale();
   const platform = usePlatform();
   const { stats } = useStats();
 
@@ -100,73 +102,81 @@ export function CommandPalette() {
       ? "macOS"
       : platform
         ? platform[0].toUpperCase() + platform.slice(1)
-        : "your platform";
+        : null;
+
+  const downloadLabel = t("hero.downloadFor", {
+    platform: platformLabel ?? t("palette.yourPlatform"),
+  });
+
+  const themeItemLabel = t("palette.switchTheme", {
+    theme: resolvedTheme === "dark" ? t("palette.themeLight") : t("palette.themeDark"),
+  });
 
   return (
     <CommandDialog
       open={open}
       onOpenChange={setOpen}
       title="ValencyStudio — Spoofer"
-      description="Search sections and quick actions"
+      description={t("palette.description")}
       className="sm:max-w-xl"
     >
-      <CommandInput placeholder="Type a command or search…" />
+      <CommandInput placeholder={t("palette.placeholder")} />
       <CommandList>
-        <CommandEmpty>No results found.</CommandEmpty>
-        <CommandGroup heading="Navigate">
+        <CommandEmpty>{t("palette.noResults")}</CommandEmpty>
+        <CommandGroup heading={t("palette.navigate")}>
           {SECTIONS.map((section) => (
             <CommandItem
               key={section.id}
-              value={section.label}
+              value={t(section.labelKey)}
               onSelect={() => goTo(section.id)}
             >
               <section.icon className="text-muted-foreground" />
-              <span>{section.label}</span>
+              <span>{t(section.labelKey)}</span>
               <ArrowRight className="ml-auto text-muted-foreground/50" />
             </CommandItem>
           ))}
         </CommandGroup>
         <CommandSeparator />
-        <CommandGroup heading="Actions">
+        <CommandGroup heading={t("palette.actions")}>
           <CommandItem
-            value={`download for ${platformLabel.toLowerCase()}`}
+            value={downloadLabel}
             onSelect={download}
           >
             <Download className="text-muted-foreground" />
-            <span>Download for {platformLabel}</span>
+            <span>{downloadLabel}</span>
             <span className="ml-auto font-mono text-[10px] text-muted-foreground/60">
               {stats.release.tag}
             </span>
           </CommandItem>
           <CommandItem
-            value="star on github"
+            value={t("cta.starOnGithub")}
             onSelect={() =>
               run(() => window.open(REPO_URL, "_blank", "noopener,noreferrer"))
             }
           >
             <Github className="text-muted-foreground" />
-            <span>Star on GitHub</span>
+            <span>{t("cta.starOnGithub")}</span>
           </CommandItem>
           <CommandItem
-            value="join discord community"
+            value={t("cta.joinDiscord")}
             onSelect={() =>
               run(() => window.open(DISCORD_URL, "_blank", "noopener,noreferrer"))
             }
           >
             <MessageCircle className="text-muted-foreground" />
-            <span>Join the Discord</span>
+            <span>{t("cta.joinDiscord")}</span>
           </CommandItem>
           <CommandItem
-            value="report a bug"
+            value={t("footer.linkBug")}
             onSelect={() =>
               run(() => window.open(BUG_REPORT_URL, "_blank", "noopener,noreferrer"))
             }
           >
             <Bug className="text-muted-foreground" />
-            <span>Report a bug</span>
+            <span>{t("footer.linkBug")}</span>
           </CommandItem>
           <CommandItem
-            value="request a feature"
+            value={t("footer.linkFeature")}
             onSelect={() =>
               run(() =>
                 window.open(FEATURE_REQUEST_URL, "_blank", "noopener,noreferrer")
@@ -174,13 +184,13 @@ export function CommandPalette() {
             }
           >
             <ArrowRight className="text-muted-foreground" />
-            <span>Request a feature</span>
+            <span>{t("footer.linkFeature")}</span>
           </CommandItem>
         </CommandGroup>
         <CommandSeparator />
-        <CommandGroup heading="Preferences">
+        <CommandGroup heading={t("palette.preferences")}>
           <CommandItem
-            value={`switch to ${resolvedTheme === "dark" ? "light" : "dark"} theme`}
+            value={themeItemLabel}
             onSelect={() => run(() => setTheme(resolvedTheme === "dark" ? "light" : "dark"))}
           >
             {resolvedTheme === "dark" ? (
@@ -188,19 +198,19 @@ export function CommandPalette() {
             ) : (
               <Moon className="text-muted-foreground" />
             )}
-            <span>Switch to {resolvedTheme === "dark" ? "light" : "dark"} theme</span>
+            <span>{themeItemLabel}</span>
           </CommandItem>
         </CommandGroup>
       </CommandList>
       <div className="flex items-center gap-4 border-t bg-surface/50 px-4 py-2.5 font-mono text-[10px] text-muted-foreground/80">
         <span className="flex items-center gap-1.5">
-          <kbd className="rounded border bg-background px-1.5 py-0.5">↑↓</kbd> navigate
+          <kbd className="rounded border bg-background px-1.5 py-0.5">↑↓</kbd> {t("palette.hintNavigate")}
         </span>
         <span className="flex items-center gap-1.5">
-          <kbd className="rounded border bg-background px-1.5 py-0.5">↵</kbd> select
+          <kbd className="rounded border bg-background px-1.5 py-0.5">↵</kbd> {t("palette.hintSelect")}
         </span>
         <span className="flex items-center gap-1.5">
-          <kbd className="rounded border bg-background px-1.5 py-0.5">esc</kbd> close
+          <kbd className="rounded border bg-background px-1.5 py-0.5">esc</kbd> {t("palette.hintClose")}
         </span>
         <span className="ml-auto flex items-center gap-1 text-primary/80">
           <Search className="size-3" />

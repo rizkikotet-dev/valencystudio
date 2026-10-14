@@ -250,3 +250,128 @@ Unresolved / next-phase recommendations (priority order):
 1. When deploy domain known: update metadataBase in layout.tsx.
 2. Optional: GITHUB_TOKEN env for higher rate limits; per-release download chart once data is non-trivial; i18n ID/EN; Discord community wall.
 3. Continue accessibility pass (focus-visible ring tuning on custom chips/buttons).
+
+---
+Task ID: R3-a
+Agent: full-stack-developer
+Task: EN/ID bilingual toggle (i18n)
+
+Work Log:
+- Read worklog.md + mirrored the proven useSyncExternalStore pattern from
+  use-platform.ts for the new locale store (hydration-safe: getServerSnapshot
+  always returns "en", so SSR markup and the hydration render match; the stored
+  preference applies right after hydration with no mismatch).
+- Created src/lib/i18n.ts: `type Locale = "en" | "id"`, flat dot-namespaced
+  dictionary (nav.*, a11y.*, hero.*, stats.*, hiw.*, features.*, assets.*,
+  comparison.*, download.*, changelog.*, faq.*, cta.*, footer.*, palette.*,
+  mock.*, type.*, common.*, toast.*) with 208 keys per locale. `const id:
+  typeof en` makes TS enforce an identical key set (verified at runtime too:
+  208/208, no missing/extra/empty). `translate(locale, key, vars?)` replaces
+  `{name}` tokens with fallback chain current dict → en dict → key. Also
+  exports `formatNumber(n, locale)` (Intl, id-ID/en-US) and `formatDate(iso,
+  locale)` for short dates ("Oct 13, 2026" / "13 Okt 2026").
+- Created src/hooks/use-locale.ts: module-level `locale` + listener Set,
+  subscribe/getSnapshot/getServerSnapshot; client init reads localStorage key
+  "vs-locale" (try/catch guarded) and falls back to navigator.language
+ .startsWith("id"); `setLocale` clamps, persists, notifies; `useLocale()`
+  returns { locale, setLocale, t } with t memoized via useCallback on locale.
+- navbar.tsx: added LocaleSwitcher — desktop compact segmented control (EN|ID,
+  h-9 chip matching the GitHub/theme chip language, ember highlight
+  bg-primary/15 + inset ring for the active segment, aria-pressed) next to the
+  theme toggle; mobile menu row with Globe icon + static bilingual "Language /
+  Bahasa" label + the same switcher. Group aria-label is a single static
+  bilingual string "Switch language · Ganti bahasa" (identical in both locales
+  by design). Translated all nav links, search chip, menu labels, aria-labels.
+- Translated every site component to t() calls: hero (headline uses **…
+  ** markers in hero.title so the highlighted span + word order can differ per
+  locale; download label interpolates the detected platform via
+  PLATFORM_META), stats-strip (CountUp now locale-aware via formatNumber;
+  commit relative time uses date-fns locale: `import { enUS, id as
+  dateFnsId } from "date-fns/locale"`, `formatDistanceToNowStrict(...,
+  { addSuffix: true, locale: locale === "id" ? dateFnsId : enUS })`;
+  release dates via formatDate), how-it-works, features, asset-types
+  (marquee + sr-only + hover title), comparison (5 rows), download (cards,
+  Detected badge, unsigned-build note, quickstart copy/toasts), changelog
+  (Latest badge, dates, view-release link), faq (all 6 Q&A rebuilt as
+  t()-segments preserving inline links/<code> blocks; item keys now index-based
+  so switching locale doesn't remount the accordion), cta (form, success
+  panel, joined-count with formatted number + singular/plural keys, share
+  buttons, all toasts), footer (columns, freshness line, license, trademark
+  disclaimer), command-palette (placeholder, groups, all items; cmdk `value`
+  props set to the visible translated label so search keeps working in both
+  languages), studio-mock (app-UI chrome only: STUDIO CONNECTED, search
+  placeholder, Scan place, Replace all, Place browser, table headers,
+  Applied/Queued/Pending statuses, singular type labels, status bar counters
+  with formatNumber, tree toggle aria-label), back-to-top.
+- page.tsx needed no changes: it only renders components + JSON-LD, and
+  JSON-LD/metadata are explicitly out of translation scope.
+
+Stage Summary:
+- 208 dictionary keys × 2 locales; files touched: src/lib/i18n.ts (new),
+  src/hooks/use-locale.ts (new), and 14 site components (navbar, hero,
+  stats-strip, how-it-works, features, asset-types, comparison, download,
+  changelog, faq, cta, footer, command-palette, studio-mock, back-to-top).
+- Keys pre-wired for the future chart agent: changelog.chartTitle,
+  changelog.chartSubtitle, changelog.downloadsUnit.
+- Left untranslated on purpose: "ValencyStudio — Spoofer", Roblox/Roblox
+  Studio/GitHub/Discord/Luau, "Tauri 2 · Rust · React 19 · Luau", file
+  extensions + example filenames, shell commands (git clone/bun install/
+  tauri:dev), "⌘K"/"Ctrl K", "rbxassetid://", version numbers, fake instance
+  names in the mock (Workspace/Lobby/Guard_Walk…), "you@studio.dev" placeholder,
+  © line, "vs-spoofer", "open source", JSON-LD, <html lang>, layout metadata.
+  Locale switcher aria-label is a static bilingual literal (not from dict) per
+  hydration-safety instruction.
+- Fixes made in passing: widened CellProps.sub to React.ReactNode (pre-existing
+  tsc error in stats-strip when passing a JSX sub); removed unused imports
+  (hero Image, mock FolderClosed).
+- Verification: `bun run lint` exit 0 (zero errors/warnings); tsc --noEmit →
+  0 errors in src (remaining hits are pre-existing in examples/ + skills/,
+  outside the app graph); `curl http://localhost:3000/` → 200 (SSR HTML shows
+  EN strings + switcher markup, as designed); dev.log clean, all API routes
+  still 200. QA note for browser: switching locale updates the whole page
+  instantly without reload; choice persists in localStorage ("vs-locale");
+  first-visit Indonesian browsers (navigator.language id*) get ID after
+  hydration; SSR always paints EN first by design.
+
+---
+Task ID: R3 (cron review round 3)
+Agent: orchestrator (Z.ai Code)
+Task: Status assessment, QA, EN/ID bilingual site, downloads chart, styling detail pass
+
+Work Log — Assessment:
+- Baseline stable at round start (lint clean, page 200, all 4 APIs 200). Chose the two top R1/R2 recommendations as this round's focus: i18n (ID/EN) + per-release downloads chart, plus the mandatory styling detail pass.
+
+Work Log — Backend:
+- github.ts: ChangelogRelease gained `downloads` (sum of all asset download_count per release, fetched in the same /releases?per_page=8 call); /api/changelog fallback entries include downloads: 0. Verified live: v3.0.2→5, v2.5.0→53, v2.4.0→35, v2.3.0→11, v2.2.0→32, v2.1.0→10, v2.0.0→6.
+
+Work Log — i18n (delegated, Task R3-a, full-stack-developer):
+- src/lib/i18n.ts (NEW): flat dictionary 208 keys × 2 locales (en/id), translate() with {placeholder} interpolation, formatNumber (Intl id-ID/en-US), formatDate (date-fns id locale), `const id: typeof en` compile-time key parity.
+- src/hooks/use-locale.ts (NEW): external-store locale (mirrors use-platform.ts) — getServerSnapshot "en" for hydration safety, localStorage "vs-locale", navigator.language id* detection, memoized t() with en-fallback chain.
+- 14 site components translated (navbar, hero, stats-strip, how-it-works, features, asset-types, comparison, download, changelog, faq, cta, footer, command-palette, studio-mock, back-to-top). Navbar gained LocaleSwitcher (desktop segmented EN|ID chip + mobile "Language / Bahasa" row with Globe). Palette item values = translated labels so ⌘K search works in both languages. Static bilingual aria-label on switcher (hydration-safe). Brand names/commands/extensions/JSON-LD deliberately untranslated.
+
+Work Log — Downloads chart + platform counts:
+- downloads-chart.tsx (NEW): CSS bar chart, oldest→newest, ember gradient bars, framer-motion height reveal, counts above bars, zero-stub for empty releases, role=img + aria-label. Renders when any release has downloads.
+- Resilience: useChangelog now persists the last good live response to localStorage ("vs-changelog-cache", 7-day TTL) and serves it flagged `stale` during GitHub rate-limit windows; chart subtitle switches to "last synced data — refreshes automatically" note (new key changelog.cachedNote in both locales). Reason: rate limits are intermittent on this machine and historical release data is immutable.
+- Changelog timeline entries show per-release download counts (Download icon + tabular-nums); download cards show per-platform asset download chips when stats.source === "github" (hidden gracefully on fallback).
+
+Work Log — Styling detail pass:
+- globals.css: global :focus-visible ring (ember 2px, offset 3px) for consistent a11y focus; .card-hover-glow utility (lift + ember border + soft glow); light-theme contrast bumps (muted-foreground 0.5→0.455, border/input 0.9→0.885).
+- section-heading: index hairline upgraded to ember gradient; hero primary CTA: gradient fill + hover lift + stronger shadow; download cards now share card-hover-glow; chart bars brighten on hover; navbar: removed dead `xs:` class.
+
+Work Log — Bugs/incidents:
+- Dev server OOM-killed mid-round (kernel log: next-server killed, 2.3GB RSS; 4GB box with headless Chrome + Turbopack). NOT a code bug. Restarted via the official .zscripts/dev.sh; closed agent-browser between phases to keep RAM headroom. Watch for recurrence if QA sessions stay open long.
+- Chart initially invisible during QA because GitHub was rate-limited → this drove the localStorage last-good design above.
+
+Verification:
+- bun run lint exit 0; tsc clean (via subagent); page 200; all 4 APIs healthy (GET /api/downloads 405 is correct POST-only).
+- Browser QA (desktop 1280/1440 + mobile 390): locale switch EN→ID instant; persisted across reload (localStorage vs-locale); hero/download/changelog/faq/cta/footer/palette all translated; hero **highlight splits correctly for ID word order; Indonesian dates (13 Okt 2026) via date-fns id locale; chart renders 8 bars with counts (aria-label "Unduhan per rilis — 152 unduhan"); palette search "unduh" matches translated items; light + dark themes crafted; mobile menu language row works; subscribe end-to-end in ID ("Kamu sudah terdaftar" + TAMBAH LAGI reset); graceful fallbacks verified live (card counts hidden, cached-note path); zero console/page errors.
+- DB cleaned: QA subscriber removed, download events 0.
+
+Stage Summary:
+- Site is now fully bilingual EN/ID with instant switching + persistence, has a real per-release downloads chart that survives GitHub rate limits via client-side last-good cache, and finer visual detail (focus rings, card glow, contrast, ornaments).
+- NOTE: metadataBase placeholder from R1 still stands (set real deploy domain when known).
+
+Unresolved / next-phase recommendations (priority order):
+1. OOM risk: 4GB box; avoid keeping browser sessions open across long idle periods; consider `NODE_OPTIONS=--max-old-space-size` if recurrences.
+2. Optional: GITHUB_TOKEN env for higher rate limits (would make live data the norm); per-platform download breakdown chart; Discord community wall; testimonial wall.
+3. Accessibility: next pass could cover prefers-reduced-motion for marquee/scan-line/chart animations.

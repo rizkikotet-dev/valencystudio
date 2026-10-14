@@ -1,11 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import { ArrowUpRight, Download, Github } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StudioMock } from "@/components/site/studio-mock";
 import { Reveal } from "@/components/site/reveal";
-import { usePlatform } from "@/hooks/use-platform";
+import { usePlatform, PLATFORM_META } from "@/hooks/use-platform";
+import { useLocale } from "@/hooks/use-locale";
 import { RELEASES_URL, REPO_URL, useStats } from "@/hooks/use-site-data";
 
 const TECH_STACK = ["Tauri 2", "Rust", "React 19", "Luau"] as const;
@@ -13,15 +13,20 @@ const TECH_STACK = ["Tauri 2", "Rust", "React 19", "Luau"] as const;
 export function Hero() {
   const platform = usePlatform();
   const { stats } = useStats();
+  const { t } = useLocale();
 
   const detectedAsset = platform
     ? stats.release.assets.find((a) => a.platform === platform)
     : undefined;
 
   const downloadHref = detectedAsset?.url ?? RELEASES_URL;
-  const downloadLabel = platform
-    ? `Download for ${platform === "macos" ? "macOS" : platform[0].toUpperCase() + platform.slice(1)}`
-    : "Download latest release";
+  const platformLabel = platform ? PLATFORM_META[platform].label : null;
+  const downloadLabel = platformLabel
+    ? t("hero.downloadFor", { platform: platformLabel })
+    : t("hero.downloadLatest");
+
+  // The highlighted phrase is wrapped in ** markers so word order can vary per locale.
+  const [titleBefore, titleHighlight, titleAfter] = t("hero.title").split("**");
 
   return (
     <section id="top" className="relative overflow-hidden">
@@ -41,13 +46,13 @@ export function Hero() {
             >
               <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse-dot" aria-hidden />
               <span className="font-mono tracking-wide text-muted-foreground">
-                {stats.release.tag} · latest release
+                {stats.release.tag} · {t("hero.latestRelease")}
               </span>
               <span className="hidden sm:inline text-border" aria-hidden>
                 |
               </span>
               <span className="hidden sm:inline font-mono tracking-wide text-muted-foreground">
-                open source · GPL-3.0
+                {t("hero.openSourceBadge")}
               </span>
               <ArrowUpRight className="size-3 text-muted-foreground transition-transform group-hover:translate-x-px group-hover:-translate-y-px" />
             </a>
@@ -56,23 +61,24 @@ export function Hero() {
           {/* Headline */}
           <Reveal delay={0.08}>
             <h1 className="font-display text-4xl sm:text-6xl lg:text-[4.5rem] font-semibold tracking-[-0.03em] leading-[1.04] text-balance max-w-4xl">
-              Every asset in your place,{" "}
-              <span className="text-primary">found and replaced</span> in one pass.
+              {titleBefore}
+              {titleHighlight ? (
+                <span className="text-primary">{titleHighlight}</span>
+              ) : null}
+              {titleAfter}
             </h1>
           </Reveal>
 
           {/* Subhead */}
           <Reveal delay={0.16}>
             <p className="max-w-2xl text-muted-foreground text-base sm:text-lg leading-relaxed">
-              ValencyStudio — Spoofer connects to a running Roblox Studio session, scans the
-              entire place, and lets you preview and replace animations, sounds, decals, meshes,
-              and videos live — without hunting through instances or editing place files.
+              {t("hero.subhead")}
             </p>
           </Reveal>
 
           {/* CTAs */}
           <Reveal delay={0.24} className="flex flex-col sm:flex-row items-center gap-3">
-            <Button asChild size="lg" className="h-12 px-6 text-[15px] font-medium gap-2.5 shadow-lg shadow-primary/25">
+            <Button asChild size="lg" className="h-12 px-6 text-[15px] font-medium gap-2.5 bg-gradient-to-b from-primary to-primary/85 shadow-lg shadow-primary/25 transition-all hover:-translate-y-px hover:shadow-xl hover:shadow-primary/35">
               <a
                 href={downloadHref}
                 target="_blank"
@@ -86,7 +92,7 @@ export function Hero() {
             <Button asChild size="lg" variant="outline" className="h-12 px-6 text-[15px] gap-2.5 bg-background/60 backdrop-blur">
               <a href={REPO_URL} target="_blank" rel="noopener noreferrer">
                 <Github className="size-[18px]" />
-                View source
+                {t("hero.viewSource")}
               </a>
             </Button>
           </Reveal>
@@ -94,13 +100,13 @@ export function Hero() {
           {/* Microcopy */}
           <Reveal delay={0.3}>
             <p className="font-mono text-[11px] tracking-wide text-muted-foreground/80">
-              Windows · macOS · Linux — free &amp; open source, GPL-3.0
+              {t("hero.microcopy")}
             </p>
           </Reveal>
 
           {/* Tech chips */}
           <Reveal delay={0.36}>
-            <ul className="mt-2 flex flex-wrap items-center justify-center gap-2" aria-label="Technology stack">
+            <ul className="mt-2 flex flex-wrap items-center justify-center gap-2" aria-label={t("a11y.techStack")}>
               {TECH_STACK.map((tech) => (
                 <li
                   key={tech}
@@ -118,7 +124,7 @@ export function Hero() {
           <div className="mx-auto max-w-4xl">
             <StudioMock />
             <p className="mt-4 text-center font-mono text-[11px] text-muted-foreground/70">
-              ValencyStudio — Spoofer running against a live Roblox Studio session
+              {t("hero.mockCaption")}
             </p>
           </div>
         </Reveal>

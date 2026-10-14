@@ -30,7 +30,10 @@ export function SectionHeading({
     >
       <div className="flex items-center gap-3 font-mono text-xs tracking-[0.22em] uppercase">
         <span className="text-primary">{index}</span>
-        <span className="h-px w-8 bg-primary/50" aria-hidden />
+        <span
+          aria-hidden
+          className="h-px w-10 bg-gradient-to-r from-primary via-primary/50 to-transparent"
+        />
         <span className="text-muted-foreground">{eyebrow}</span>
       </div>
       <h2 className="font-display text-3xl sm:text-4xl lg:text-[2.75rem] font-semibold tracking-tight text-balance leading-[1.1]">

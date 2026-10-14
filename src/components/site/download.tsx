@@ -16,6 +16,8 @@ import { SectionHeading } from "@/components/site/section-heading";
 import { Reveal } from "@/components/site/reveal";
 import { Button } from "@/components/ui/button";
 import { usePlatform, PLATFORM_META } from "@/hooks/use-platform";
+import { useLocale } from "@/hooks/use-locale";
+import { formatNumber } from "@/lib/i18n";
 import {
   postDownload,
   RELEASES_URL,
@@ -35,18 +37,19 @@ const BUILD_STEPS = [
 
 function Quickstart() {
   const [copied, setCopied] = useState(false);
+  const { t } = useLocale();
 
   async function copyAll() {
     const text = BUILD_STEPS.join("\n");
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
-      toast.success("Copied to clipboard", {
-        description: "Paste it in your terminal to build from source.",
+      toast.success(t("toast.copiedToClipboard"), {
+        description: t("toast.pasteToBuild"),
       });
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Couldn't access the clipboard.");
+      toast.error(t("toast.clipboardError"));
     }
   }
 
@@ -59,16 +62,16 @@ function Quickstart() {
           <span className="size-2.5 rounded-full bg-primary/70" />
         </span>
         <span className="ml-1 font-mono text-[11px] text-white/40">
-          build from source — requires Rust + Bun + Node.js 20
+          {t("download.buildFromSourceNote")}
         </span>
         <button
           type="button"
           onClick={copyAll}
-          aria-label="Copy build commands"
+          aria-label={t("a11y.copyBuildCommands")}
           className="ml-auto flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2.5 py-1 font-mono text-[10px] text-white/60 transition-colors hover:text-white hover:border-primary/40"
         >
           {copied ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
-          {copied ? "Copied" : "Copy"}
+          {copied ? t("common.copied") : t("common.copy")}
         </button>
       </div>
       <div className="px-4 py-4 font-mono text-[12px] leading-[1.9]">
@@ -98,30 +101,33 @@ function DownloadCard({
   platform,
   detected,
   assetName,
+  assetDownloads,
+  live,
   href,
   onDownload,
 }: {
   platform: Platform;
   detected: boolean;
   assetName: string;
+  assetDownloads: number;
+  live: boolean;
   href: string;
   onDownload: (platform: Platform, href: string) => void;
 }) {
   const Icon = PLATFORM_ICONS[platform];
   const meta = PLATFORM_META[platform];
+  const { locale, t } = useLocale();
 
   return (
     <article
       className={cn(
-        "relative flex flex-col gap-5 rounded-lg border bg-card p-6 transition-all duration-300",
-        detected
-          ? "border-primary/50 shadow-[0_16px_48px_-20px_rgba(234,88,12,0.35)]"
-          : "hover:border-foreground/20"
+        "relative flex flex-col gap-5 rounded-lg border bg-card p-6 card-hover-glow",
+        detected && "border-primary/50 shadow-[0_16px_48px_-20px_rgba(234,88,12,0.35)]"
       )}
     >
       {detected ? (
         <span className="absolute -top-2.5 left-5 rounded-full bg-primary px-2.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-[0.18em] text-primary-foreground">
-          Detected
+          {t("download.detected")}
         </span>
       ) : null}
 
@@ -136,11 +142,17 @@ function DownloadCard({
 
       <div>
         <h3 className="font-display text-lg font-semibold tracking-tight">
-          {meta.label} build
+          {t("download.platformBuild", { platform: meta.label })}
         </h3>
         <p className="mt-1 font-mono text-[11px] text-muted-foreground break-all leading-relaxed">
           {assetName}
         </p>
+        {live && assetDownloads > 0 ? (
+          <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-border bg-surface/60 px-2.5 py-0.5 font-mono text-[10px] tabular-nums text-muted-foreground">
+            <DownloadIcon className="size-3 text-primary/70" aria-hidden />
+            {t("download.assetDownloads", { count: formatNumber(assetDownloads, locale) })}
+          </p>
+        ) : null}
       </div>
 
       <Button
@@ -149,7 +161,7 @@ function DownloadCard({
         onClick={() => onDownload(platform, href)}
       >
         <DownloadIcon className="size-4" />
-        Download {meta.fileExtension}
+        {t("download.downloadFile", { ext: meta.fileExtension })}
       </Button>
     </article>
   );
@@ -158,6 +170,7 @@ function DownloadCard({
 export function DownloadSection() {
   const { stats } = useStats();
   const platform = usePlatform();
+  const { t } = useLocale();
   const [pending, setPending] = useState<Platform | null>(null);
 
   function assetNameFor(p: Platform): string {
@@ -171,12 +184,16 @@ export function DownloadSection() {
     return stats.release.assets.find((a) => a.platform === p)?.url ?? RELEASES_URL;
   }
 
+  function downloadsFor(p: Platform): number {
+    return stats.release.assets.find((a) => a.platform === p)?.downloads ?? 0;
+  }
+
   function handleDownload(p: Platform, href: string) {
     setPending(p);
     void postDownload(p).finally(() => setPending(null));
     window.open(href, "_blank", "noopener,noreferrer");
-    toast.success(`Opening the ${PLATFORM_META[p].label} download…`, {
-      description: "Every release ships with the Studio plugin included.",
+    toast.success(t("toast.openingDownload", { platform: PLATFORM_META[p].label }), {
+      description: t("toast.releaseIncludesPlugin"),
     });
   }
 
@@ -185,9 +202,9 @@ export function DownloadSection() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <SectionHeading
           index="04"
-          eyebrow="Download"
-          title="Get ValencyStudio — Spoofer"
-          description="Free and open source under GPL-3.0. Download the latest build for your platform — the Roblox Studio plugin (ValencyStudioSpoofer.rbxmx) is included with every release and syncs itself on first launch."
+          eyebrow={t("nav.download")}
+          title={t("download.title")}
+          description={t("download.description")}
         />
 
         <Reveal className="mt-12 sm:mt-16">
@@ -198,6 +215,8 @@ export function DownloadSection() {
                 platform={p}
                 detected={platform === p}
                 assetName={assetNameFor(p)}
+                assetDownloads={downloadsFor(p)}
+                live={stats.source === "github"}
                 href={hrefFor(p)}
                 onDownload={handleDownload}
               />
@@ -208,7 +227,7 @@ export function DownloadSection() {
         {/* Transparency note — straight from the README */}
         <Reveal delay={0.1} className="mt-6">
           <aside
-            aria-label="Build transparency note"
+            aria-label={t("a11y.transparencyNote")}
             className="flex flex-col sm:flex-row gap-4 rounded-lg border bg-surface/60 p-5"
           >
             <div className="flex size-10 shrink-0 items-center justify-center rounded-md border border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400">
@@ -216,18 +235,16 @@ export function DownloadSection() {
             </div>
             <div className="flex-1">
               <h3 className="font-display text-sm font-semibold tracking-tight">
-                Unsigned builds — read before installing
+                {t("download.unsignedTitle")}
               </h3>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                Windows Defender and other antivirus software may flag unsigned builds.
-                ValencyStudio — Spoofer is not currently code signed. Builds can be independently
-                verified by compiling the project from source.
+                {t("download.unsignedBody")}
               </p>
             </div>
             <div className="flex flex-col sm:justify-center gap-2 shrink-0">
               <Button asChild variant="outline" size="sm" className="gap-1.5">
                 <a href={REPO_URL} target="_blank" rel="noopener noreferrer">
-                  Compile from source
+                  {t("download.compileFromSource")}
                   <ArrowUpRight className="size-3.5" />
                 </a>
               </Button>
@@ -238,7 +255,7 @@ export function DownloadSection() {
                   ) : (
                     <ArrowUpRight className="size-3.5" />
                   )}
-                  All releases
+                  {t("download.allReleases")}
                 </a>
               </Button>
             </div>
