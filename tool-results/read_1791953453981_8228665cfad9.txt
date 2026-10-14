@@ -1,0 +1,568 @@
+     1→# Worklog — ValencyStudio Spoofer Launch Site
+     2→
+     3→## Project Brief (created by orchestrator, Task 1)
+     4→
+     5→Goal: Fullstack launch / promotion site for **ValencyStudio - Spoofer**
+     6→(https://github.com/valency-studio/valencystudio-spoofer) — a desktop asset
+     7→replacement tool for Roblox Studio (Tauri 2 · Rust · React 19 · Luau, GPL-3.0,
+     8→latest tag v3.0.2, builds for Windows `.exe` / macOS `.dmg` / Linux `.AppImage`,
+     9→companion Studio plugin `ValencyStudioSpoofer.rbxmx`).
+    10→
+    11→- Route: single page `/` only (project rule). APIs allowed under `/api/*`.
+    12→- Design: dark-first professional dev-tool aesthetic. NO "AI slop"
+    13→  (no purple gradients, no generic copy). Accent = ember orange.
+    14→  Fonts: Space Grotesk (display) / Inter (body) / JetBrains Mono (mono).
+    15→  Product copy is taken from the real repo README.
+    16→- Stack: Next.js 16 App Router, TS, Tailwind 4 + shadcn/ui, framer-motion,
+    17→  @tanstack/react-query, next-themes (dark default), sonner toasts, Prisma/SQLite.
+    18→- Footer must be sticky-to-bottom (`min-h-svh flex flex-col` + `mt-auto`).
+    19→- Do NOT use z-ai-web-dev-sdk in client code. No server actions — use API routes.
+    20→
+    21→### API contract (agreed — backend Task 2-a must implement exactly this)
+    22→
+    23→1. `GET /api/stats` →
+    24→   `{ github: { stars:number, forks:number, watchers:number, openIssues:number },
+    25→      release: { tag:string, name:string, publishedAt:string|null, url:string,
+    26→        assets: { platform:"windows"|"macos"|"linux", name:string, url:string, downloads:number }[] },
+    27→      totals: { downloads:number|null },
+    28→      site: { downloadClicks:number, subscribers:number },
+    29→      source: "github"|"fallback" }`
+    30→   In-memory cache TTL 10 min; on GitHub failure use fallback constants (v3.0.2).
+    31→2. `GET /api/changelog` → `{ releases: { tag, name, publishedAt, url, notes:string }[],
+    32→      source:"github"|"fallback" }` — latest 8 releases, notes plain text (strip markdown).
+    33→3. `POST /api/subscribe` body `{ email }` (zod-validated) → `{ ok:true, subscribers:number }`
+    34→   or `{ ok:false, error:string }` (400/500). Unique email via Prisma, upsert on conflict.
+    35→4. `POST /api/downloads` body `{ platform:"windows"|"macos"|"linux" }` →
+    36→   `{ ok:true, clicks:{ windows:number, macos:number, linux:number, total:number } }`
+    37→
+    38→DB models (replace scaffold User/Post):
+    39→- `Subscriber { id String @id @default(cuid()), email String @unique, createdAt DateTime @default(now()) }`
+    40→- `DownloadEvent { id String @id @default(cuid()), platform String, createdAt DateTime @default(now()) }`
+    41→
+    42→Repo facts for copy/fallback: stars≈1, GPL-3.0, Discord https://discord.gg/6RHuXU9DCv,
+    43→issues templates bug_report.md / feature_request.md, releases page
+    44→https://github.com/valency-studio/valencystudio-spoofer/releases/latest.
+    45→
+    46→### Work log
+    47→
+    48→---
+    49→Task ID: 1
+    50→Agent: orchestrator (Z.ai Code)
+    51→Task: Foundation — research repo, init worklog, design tokens, layout, providers
+    52→
+    53→Work Log:
+    54→- Researched repo metadata, README, tags via GitHub API/raw (product facts above)
+    55→- Downloaded official app icon → public/icon.png + public/app-icon.png
+    56→- Rewrote globals.css: ember-orange token set, dark-first, bg-grid/bg-dots
+    57→  utilities, custom scrollbars, marquee keyframes, selection color
+    58→- Rewrote layout.tsx: Space Grotesk + Inter + JetBrains Mono via next/font,
+    59→  real product metadata/OG, /icon.png favicon
+    60→- Added src/components/providers.tsx (next-themes dark default + react-query + sonner Toaster)
+    61→
+    62→Stage Summary:
+    63→- Design system + app shell ready. API contract above is binding for Task 2-a.
+    64→
+    65→---
+    66→Task ID: 2-a
+    67→Agent: full-stack-developer
+    68→Task: Backend — Prisma schema, GitHub lib with memory cache, API routes (stats/changelog/subscribe/downloads)
+    69→
+    70→Work Log:
+    71→- Replaced scaffold User/Post models in prisma/schema.prisma with Subscriber
+    72→  (email unique) + DownloadEvent (platform String); kept sqlite generator/datasource.
+    73→  Ran `bun run db:push` + `bun run db:generate` (Prisma Client v6.19.2, db/custom.db).
+    74→- Created src/lib/github.ts: server-only GitHub client for
+    75→  valency-studio/valencystudio-spoofer. Module-level Map cache with expiry
+    76→  timestamps, 10 min TTL (success responses only; failures are never cached).
+    77→  ghFetch helper: Accept: application/vnd.github+json, required User-Agent,
+    78→  X-GitHub-Api-Version 2022-11-28, optional Bearer token if GITHUB_TOKEN env set,
+    79→  cache: "no-store", AbortSignal.timeout(8000). Exports typed fns:
+    80→  fetchRepoStats / fetchLatestRelease / fetchReleases / fetchTotalDownloads
+    81→  (+ stripMarkdownToPlainText helper and interfaces RepoStats, ReleaseInfo,
+    82→  ReleaseAsset, ChangelogRelease, ReleasesResult, AssetPlatform, DataSource).
+    83→  Assets classified by extension: .exe→windows, .dmg→macos, .AppImage→linux,
+    84→  everything else ignored. Release notes: markdown stripped to plain text
+    85→  (links keep label, images/headings/backticks/quotes/emphasis removed,
+    86→  whitespace collapsed) and capped at 400 chars + ellipsis. All functions
+    87→  never throw — fallback constants on any error (tag v3.0.2, stars 1,
+    88→  forks 0, watchers 1, openIssues 0, 3 platform assets, asset url =
+    89→  .../releases/latest).
+    90→- Created 4 route handlers (all `runtime = "nodejs"`, `dynamic = "force-dynamic"`,
+    91→  NextResponse.json, TS strict, no server actions):
+    92→  - GET  /api/stats    → github + release + totals + site (DB counts in
+    93→    db.$transaction wrapped in try/catch → zeros on DB failure) + source.
+    94→    source = "github" only when repo stats, release AND total downloads all
+    95→    live; otherwise "fallback".
+    96→  - GET  /api/changelog → fetchReleases(); on fallback/empty returns hardcoded
+    97→    v3.0.2 (publishedAt "2026-10-13") / v3.0.1 / v2.5.0 / v2.4.0 list with
+    98→    "See the release page for the full changelog." notes.
+    99→  - POST /api/subscribe → zod v4 `z.string().trim().toLowerCase().pipe(z.email())`
+   100→    (verified zod 4.3.5 at runtime), Prisma upsert idempotent, P2002 unique
+   101→    violation caught via Prisma.PrismaClientKnownRequestError → still 200 ok;
+   102→    invalid body → 400 {ok:false,error}, DB error → 500. Optional GET returns
+   103→    { subscribers: n }.
+   104→  - POST /api/downloads → zod enum windows/macos/linux, create DownloadEvent,
+   105→    groupBy counts → { ok:true, clicks:{windows,macos,linux,total} }; invalid →
+   106→    400; DB error → 200 {ok:false,error} so tracking never breaks download UX.
+   107→- Verified every endpoint with curl against the running dev server (first-hit
+   108→  compiles on demand). Fixed one deviation found during verification: fallback
+   109→  asset URLs now point to .../releases/latest exactly as specified.
+   110→- Cleaned test rows afterwards (1 subscriber, 2 download events) so the site
+   111→  launches with zeroed counters; scoped eslint on my 5 files → clean.
+   112→
+   113→Stage Summary:
+   114→- curl verification results (all HTTP 200 except intentional 400s):
+   115→  * GET  /api/stats → 200 {"github":{"stars":1,"forks":0,"watchers":0,"openIssues":0},
+   116→    "release":{"tag":"v3.0.2","name":"ValencyStudio - Spoofer v3.0.2","assets":[
+   117→    windows .exe / macos .dmg / linux .AppImage]},"totals":{"downloads":...},
+   118→    "site":{"downloadClicks":0,"subscribers":0},"source":"github"|"fallback"}.
+   119→    Observed BOTH paths: live GitHub data (publishedAt "2026-10-13T15:45:26Z",
+   120→    real /releases/download/ asset URLs, windows downloads:1) when not
+   121→    rate-limited, and fallback constants when GitHub 403s — machine's GitHub
+   122→    rate limit is intermittent, handled gracefully.
+   123→  * GET  /api/changelog → 200 fallback list v3.0.2(2026-10-13)/v3.0.1/v2.5.0/
+   124→    v2.4.0 when GitHub rate-limited; switches to live 8-release list with
+   125→    plain-text notes when reachable (source field reflects it).
+   126→  * POST /api/subscribe {"email":"test@example.com"} → {"ok":true,"subscribers":1};
+   127→    duplicate POST → idempotent {"ok":true,"subscribers":1}; invalid email →
+   128→    400 {"ok":false,"error":"Please enter a valid email address."}.
+   129→  * POST /api/downloads {"platform":"windows"} → {"ok":true,"clicks":{"windows":1,
+   130→    "macos":0,"linux":0,"total":1}}; second linux click updated totals; invalid
+   131→    platform → 400 {"ok":false,"error":"Invalid platform. Expected \"windows\",
+   132→    \"macos\" or \"linux\"."}.
+   133→- Key decisions: zod v4 top-level z.email() behind a trim/toLowerCase pipe;
+   134→  negative GitHub responses not cached (so recovery is immediate after a rate
+   135→  limit window); stats `source` is all-or-nothing ("github" only if repo stats,
+   136→  release and total downloads are all live) so the UI badge never overstates;
+   137→  changelog owns its own hardcoded fallback (lib returns empty+fallback).
+   138→- Artifacts: prisma/schema.prisma (Subscriber, DownloadEvent),
+   139→  src/lib/github.ts, src/app/api/{stats,changelog,subscribe,downloads}/route.ts.
+   140→  DB test rows removed → counters start at 0. ESLint scoped-clean; dev.log
+   141→  shows all requests 200/400 as expected, no errors.
+   142→
+   143→---
+   144→Task ID: 2-b
+   145→Agent: orchestrator (Z.ai Code)
+   146→Task: Frontend — all site sections and components
+   147→
+   148→Work Log:
+   149→- Built hooks: use-site-data.ts (TanStack Query + fallback constants + API posters), use-platform.ts (useSyncExternalStore platform detection)
+   150→- Built components/site/: reveal.tsx (framer-motion whileInView), section-heading.tsx (numbered eyebrows), navbar.tsx (sticky blur nav, CSS-driven theme icons, GitHub stars, mobile menu), studio-mock.tsx (hand-built app window: title bar, toolbar, place browser tree, live-cycling replacement queue, scan line, status bar), hero.tsx, stats-strip.tsx (count-up numbers), how-it-works.tsx (3 steps + connector), features.tsx (6 cards + corner ticks), asset-types.tsx (marquee), download.tsx (3 platform cards, detected-platform highlight, click tracking, unsigned-build transparency note), changelog.tsx (live releases w/ skeleton), faq.tsx (accordion), cta.tsx (subscribe form + live count), footer.tsx (3 columns + legal/trademark disclaimer + safe-area inset)
+   151→- page.tsx: min-h-svh flex flex-col, sticky footer via mt-auto
+   152→
+   153→Stage Summary:
+   154→- 15 components/hooks, dark-first + crafted light theme, ember accent, Space Grotesk/Inter/JetBrains Mono
+   155→
+   156→---
+   157→Task ID: 3
+   158→Agent: orchestrator (Z.ai Code)
+   159→Task: Integration — lint fixes, error fixes, API verification
+   160→
+   161→Work Log:
+   162→- Fixed react-hooks/set-state-in-effect lint errors: navbar theme toggle → CSS-driven icons (no mounted state), use-platform → useSyncExternalStore, cta → derived subscriber count
+   163→- Fixed lucide-react export: GitTag does not exist → Tag (import + JSX)
+   164→- Created missing reveal.tsx (lost in earlier mkdir failure)
+   165→- Added metadataBase to metadata (silenced OG warning)
+   166→- Verified: bun run lint clean; page 200; /api/stats /api/changelog /api/subscribe /api/downloads all 200 with valid contract JSON
+   167→
+   168→Stage Summary:
+   169→- Zero lint errors, zero runtime errors, all 4 APIs verified live
+   170→
+   171→---
+   172→Task ID: 4
+   173→Agent: orchestrator (Z.ai Code)
+   174→Task: QA with agent-browser — rendering, interactivity, responsiveness
+   175→
+   176→Work Log:
+   177→- Fixed hydration error: ThemeToggle aria-label depended on resolvedTheme → static "Toggle theme"
+   178→- Fixed leftover <GitTag> usage causing runtime ReferenceError
+   179→- Verified in browser (1440x900, 390x844): all sections render on real scroll; fonts confirmed loaded (Space Grotesk/Inter/JetBrains Mono); platform detection works (Linux detected, "Download for Linux"); FAQ accordion opens; subscribe form → 200 + sonner toast "You're on the list"; download click → opens real GitHub release URL in new tab (live API URL) + toast + DownloadEvent recorded; theme toggle light/dark both crafted; mobile hamburger menu works; footer sticky at bottom, safe-area inset added
+   180→- Cleaned QA test rows (2 subscribers, 2 download events) → counters start at 0
+   181→- Fresh reload: zero console errors, zero page errors
+   182→
+   183→Stage Summary:
+   184→- Site is fully interactive and browser-verified. Known non-issue: full-page virtual screenshots don't trigger whileInView reveals; real scrolling verified working.
+   185→
+   186→---
+   187→Task ID: R1 (cron review round 1)
+   188→Agent: orchestrator (Z.ai Code)
+   189→Task: Status assessment, QA, new features (command palette, comparison, quickstart, OG image, polish)
+   190→
+   191→Work Log — Assessment:
+   192→- Baseline stable: page 200, all 4 APIs 200, no errors in dev.log, previous QA state intact.
+   193→
+   194→Work Log — New features built:
+   195→- OG share image: hand-crafted og-card.html (brand icon, wordmark, headline, tech chips, meta row) → screenshotted at 1200x630 → public/og.png; wired into openGraph (summary_large_image) + twitter metadata.
+   196→- Command palette (⌘K/Ctrl+K): new command-palette.tsx on shadcn CommandDialog. Groups: Navigate (6 sections), Actions (Download for {detected platform} w/ tracking + GitHub/Discord/bug/feature links), Preferences (theme switch). Global hotkey listener + custom-event trigger; footer kbd hints. Navbar: xl search chip with ⌘K kbd + mobile menu "Search…" item.
+   197→- Comparison section (#comparison, "03 — Comparison"): honest 5-row "Doing it by hand" vs "With ValencyStudio — Spoofer" table, all claims map to real README features.
+   198→- Quickstart terminal block in Download section: 4 numbered build commands (git clone/cd/bun install/bun run tauri:dev) with one-click copy-to-clipboard + toast; terminal stays dark in both themes.
+   199→- Polish: reading-progress hairline (framer-motion useScroll, fixed top); BackToTop button (appears >700px, AnimatePresence); JSON-LD SoftwareApplication schema (version, platforms, GPL license, free offer) in page.tsx; section renumbering 01–06.
+   200→
+   201→Work Log — Bugs found & fixed during QA:
+   202→- navbar.tsx: missing </header> after refactor → JSX parse error → fixed.
+   203→- Command palette search bug: cmdk filters on `value` prop, not visible label — "for linux"/"switch" matched nothing → set value={visible label} on download + theme items; re-verified: "for linux" → Enter opens real release URL in new tab + DownloadEvent recorded.
+   204→- DB cleanup: removed 2 QA download events so launch counters start at 0.
+   205→
+   206→Verification:
+   207→- bun run lint clean; page 200; browser-verified: palette open/filter/navigate/download/theme all work; comparison + quickstart render in dark & light; mobile 390px OK; JSON-LD + og:image meta present; zero console/page errors.
+   208→
+   209→Stage Summary:
+   210→- Site now has: ⌘K command palette, comparison table, build-from-source quickstart, branded OG image, scroll progress, back-to-top, structured data.
+   211→- NOTE for next round: metadataBase is placeholder "https://github.com/valency-studio" — replace with the real deploy domain for absolute OG URLs when known.
+   212→
+   213→Unresolved / next-phase recommendations (priority order):
+   214→1. GitHub rate limits are intermittent → stats/changelog sometimes serve fallback until window resets (handled, self-recovers; could add longer TTL or a proxy token via GITHUB_TOKEN env).
+   215→2. Could add: per-release download-count chart (data still sparse — repo is new), i18n (ID/EN toggle), testimonials/community wall via Discord.
+   216→3. Keep polishing hover/focus micro-interactions on cards and marquee pause-on-hover.
+   217→
+   218→---
+   219→Task ID: R2 (cron review round 2)
+   220→Agent: orchestrator (Z.ai Code)
+   221→Task: Status assessment, QA, live commit data, micro-interactions, CTA share/success, footer freshness
+   222→
+   223→Work Log — Assessment:
+   224→- Baseline stable (page 200, APIs 200, zero errors). Continued with feature + polish round per R1 recommendations.
+   225→
+   226→Work Log — Features:
+   227→- Live commit data: github.ts gained fetchLatestCommit() (GET /commits?per_page=1, 10-min cache, null on failure, negative results never cached); /api/stats now returns lastCommit {sha,date,message}|null; StatsResponse type + fallback updated.
+   228→- StatsStrip: new 5th "Last commit" cell — relative time via date-fns formatDistanceToNowStrict, ember sha7 + "on main" sub with message tooltip; grid now lg:grid-cols-5; graceful "fetching from GitHub…" state during rate limits (verified live — GitHub was 403 during QA and UI degraded gracefully).
+   229→- CTA: inline success panel after subscribing (green "You're on the list" + "Add another" reset); new "Copy link" share button (clipboard + toast) next to Star on GitHub / Join the Discord.
+   230→- Footer: data-freshness line with Radio icon — "Live from GitHub API · release v3.0.2 · <date>" or "Serving cached data — refreshes automatically".
+   231→
+   232→Work Log — Styling/micro-interactions:
+   233→- Marquee pause-on-hover: `.marquee-hover-pause:hover > .animate-marquee` utility in globals.css (Tailwind 4 arbitrary `hover:[animation-play-state:paused]` silently failed to compile — replaced with real CSS rule; verified computed style "paused" on hover).
+   234→- Navbar links: animated ember underline on hover (after: pseudo, origin-left scale-x).
+   235→- Stats cells: hover bg tint.
+   236→- BackToTop moved to bottom-24 to clear the toast stack.
+   237→
+   238→Work Log — Bugs found & fixed:
+   239→- Tailwind arbitrary hover:animation-play-state class not compiling → replaced with globals.css utility (verified in browser).
+   240→- DB cleanup: removed 1 QA subscriber so counters start at 0.
+   241→
+   242→Verification:
+   243→- bun run lint clean; page 200; browser-verified: 5-cell strip renders with graceful fallbacks, subscribe inline success + reset works, copy-link works, marquee pauses on hover, footer freshness line shows cached state, zero console/page errors.
+   244→
+   245→Stage Summary:
+   246→- Site gained live commit signal, honest rate-limit UX, share affordances, and finer micro-interactions.
+   247→- metadataBase placeholder note from R1 still stands (set real domain at deploy).
+   248→
+   249→Unresolved / next-phase recommendations (priority order):
+   250→1. When deploy domain known: update metadataBase in layout.tsx.
+   251→2. Optional: GITHUB_TOKEN env for higher rate limits; per-release download chart once data is non-trivial; i18n ID/EN; Discord community wall.
+   252→3. Continue accessibility pass (focus-visible ring tuning on custom chips/buttons).
+   253→
+   254→---
+   255→Task ID: R3-a
+   256→Agent: full-stack-developer
+   257→Task: EN/ID bilingual toggle (i18n)
+   258→
+   259→Work Log:
+   260→- Read worklog.md + mirrored the proven useSyncExternalStore pattern from
+   261→  use-platform.ts for the new locale store (hydration-safe: getServerSnapshot
+   262→  always returns "en", so SSR markup and the hydration render match; the stored
+   263→  preference applies right after hydration with no mismatch).
+   264→- Created src/lib/i18n.ts: `type Locale = "en" | "id"`, flat dot-namespaced
+   265→  dictionary (nav.*, a11y.*, hero.*, stats.*, hiw.*, features.*, assets.*,
+   266→  comparison.*, download.*, changelog.*, faq.*, cta.*, footer.*, palette.*,
+   267→  mock.*, type.*, common.*, toast.*) with 208 keys per locale. `const id:
+   268→  typeof en` makes TS enforce an identical key set (verified at runtime too:
+   269→  208/208, no missing/extra/empty). `translate(locale, key, vars?)` replaces
+   270→  `{name}` tokens with fallback chain current dict → en dict → key. Also
+   271→  exports `formatNumber(n, locale)` (Intl, id-ID/en-US) and `formatDate(iso,
+   272→  locale)` for short dates ("Oct 13, 2026" / "13 Okt 2026").
+   273→- Created src/hooks/use-locale.ts: module-level `locale` + listener Set,
+   274→  subscribe/getSnapshot/getServerSnapshot; client init reads localStorage key
+   275→  "vs-locale" (try/catch guarded) and falls back to navigator.language
+   276→ .startsWith("id"); `setLocale` clamps, persists, notifies; `useLocale()`
+   277→  returns { locale, setLocale, t } with t memoized via useCallback on locale.
+   278→- navbar.tsx: added LocaleSwitcher — desktop compact segmented control (EN|ID,
+   279→  h-9 chip matching the GitHub/theme chip language, ember highlight
+   280→  bg-primary/15 + inset ring for the active segment, aria-pressed) next to the
+   281→  theme toggle; mobile menu row with Globe icon + static bilingual "Language /
+   282→  Bahasa" label + the same switcher. Group aria-label is a single static
+   283→  bilingual string "Switch language · Ganti bahasa" (identical in both locales
+   284→  by design). Translated all nav links, search chip, menu labels, aria-labels.
+   285→- Translated every site component to t() calls: hero (headline uses **…
+   286→  ** markers in hero.title so the highlighted span + word order can differ per
+   287→  locale; download label interpolates the detected platform via
+   288→  PLATFORM_META), stats-strip (CountUp now locale-aware via formatNumber;
+   289→  commit relative time uses date-fns locale: `import { enUS, id as
+   290→  dateFnsId } from "date-fns/locale"`, `formatDistanceToNowStrict(...,
+   291→  { addSuffix: true, locale: locale === "id" ? dateFnsId : enUS })`;
+   292→  release dates via formatDate), how-it-works, features, asset-types
+   293→  (marquee + sr-only + hover title), comparison (5 rows), download (cards,
+   294→  Detected badge, unsigned-build note, quickstart copy/toasts), changelog
+   295→  (Latest badge, dates, view-release link), faq (all 6 Q&A rebuilt as
+   296→  t()-segments preserving inline links/<code> blocks; item keys now index-based
+   297→  so switching locale doesn't remount the accordion), cta (form, success
+   298→  panel, joined-count with formatted number + singular/plural keys, share
+   299→  buttons, all toasts), footer (columns, freshness line, license, trademark
+   300→  disclaimer), command-palette (placeholder, groups, all items; cmdk `value`
+   301→  props set to the visible translated label so search keeps working in both
+   302→  languages), studio-mock (app-UI chrome only: STUDIO CONNECTED, search
+   303→  placeholder, Scan place, Replace all, Place browser, table headers,
+   304→  Applied/Queued/Pending statuses, singular type labels, status bar counters
+   305→  with formatNumber, tree toggle aria-label), back-to-top.
+   306→- page.tsx needed no changes: it only renders components + JSON-LD, and
+   307→  JSON-LD/metadata are explicitly out of translation scope.
+   308→
+   309→Stage Summary:
+   310→- 208 dictionary keys × 2 locales; files touched: src/lib/i18n.ts (new),
+   311→  src/hooks/use-locale.ts (new), and 14 site components (navbar, hero,
+   312→  stats-strip, how-it-works, features, asset-types, comparison, download,
+   313→  changelog, faq, cta, footer, command-palette, studio-mock, back-to-top).
+   314→- Keys pre-wired for the future chart agent: changelog.chartTitle,
+   315→  changelog.chartSubtitle, changelog.downloadsUnit.
+   316→- Left untranslated on purpose: "ValencyStudio — Spoofer", Roblox/Roblox
+   317→  Studio/GitHub/Discord/Luau, "Tauri 2 · Rust · React 19 · Luau", file
+   318→  extensions + example filenames, shell commands (git clone/bun install/
+   319→  tauri:dev), "⌘K"/"Ctrl K", "rbxassetid://", version numbers, fake instance
+   320→  names in the mock (Workspace/Lobby/Guard_Walk…), "you@studio.dev" placeholder,
+   321→  © line, "vs-spoofer", "open source", JSON-LD, <html lang>, layout metadata.
+   322→  Locale switcher aria-label is a static bilingual literal (not from dict) per
+   323→  hydration-safety instruction.
+   324→- Fixes made in passing: widened CellProps.sub to React.ReactNode (pre-existing
+   325→  tsc error in stats-strip when passing a JSX sub); removed unused imports
+   326→  (hero Image, mock FolderClosed).
+   327→- Verification: `bun run lint` exit 0 (zero errors/warnings); tsc --noEmit →
+   328→  0 errors in src (remaining hits are pre-existing in examples/ + skills/,
+   329→  outside the app graph); `curl http://localhost:3000/` → 200 (SSR HTML shows
+   330→  EN strings + switcher markup, as designed); dev.log clean, all API routes
+   331→  still 200. QA note for browser: switching locale updates the whole page
+   332→  instantly without reload; choice persists in localStorage ("vs-locale");
+   333→  first-visit Indonesian browsers (navigator.language id*) get ID after
+   334→  hydration; SSR always paints EN first by design.
+   335→
+   336→---
+   337→Task ID: R3 (cron review round 3)
+   338→Agent: orchestrator (Z.ai Code)
+   339→Task: Status assessment, QA, EN/ID bilingual site, downloads chart, styling detail pass
+   340→
+   341→Work Log — Assessment:
+   342→- Baseline stable at round start (lint clean, page 200, all 4 APIs 200). Chose the two top R1/R2 recommendations as this round's focus: i18n (ID/EN) + per-release downloads chart, plus the mandatory styling detail pass.
+   343→
+   344→Work Log — Backend:
+   345→- github.ts: ChangelogRelease gained `downloads` (sum of all asset download_count per release, fetched in the same /releases?per_page=8 call); /api/changelog fallback entries include downloads: 0. Verified live: v3.0.2→5, v2.5.0→53, v2.4.0→35, v2.3.0→11, v2.2.0→32, v2.1.0→10, v2.0.0→6.
+   346→
+   347→Work Log — i18n (delegated, Task R3-a, full-stack-developer):
+   348→- src/lib/i18n.ts (NEW): flat dictionary 208 keys × 2 locales (en/id), translate() with {placeholder} interpolation, formatNumber (Intl id-ID/en-US), formatDate (date-fns id locale), `const id: typeof en` compile-time key parity.
+   349→- src/hooks/use-locale.ts (NEW): external-store locale (mirrors use-platform.ts) — getServerSnapshot "en" for hydration safety, localStorage "vs-locale", navigator.language id* detection, memoized t() with en-fallback chain.
+   350→- 14 site components translated (navbar, hero, stats-strip, how-it-works, features, asset-types, comparison, download, changelog, faq, cta, footer, command-palette, studio-mock, back-to-top). Navbar gained LocaleSwitcher (desktop segmented EN|ID chip + mobile "Language / Bahasa" row with Globe). Palette item values = translated labels so ⌘K search works in both languages. Static bilingual aria-label on switcher (hydration-safe). Brand names/commands/extensions/JSON-LD deliberately untranslated.
+   351→
+   352→Work Log — Downloads chart + platform counts:
+   353→- downloads-chart.tsx (NEW): CSS bar chart, oldest→newest, ember gradient bars, framer-motion height reveal, counts above bars, zero-stub for empty releases, role=img + aria-label. Renders when any release has downloads.
+   354→- Resilience: useChangelog now persists the last good live response to localStorage ("vs-changelog-cache", 7-day TTL) and serves it flagged `stale` during GitHub rate-limit windows; chart subtitle switches to "last synced data — refreshes automatically" note (new key changelog.cachedNote in both locales). Reason: rate limits are intermittent on this machine and historical release data is immutable.
+   355→- Changelog timeline entries show per-release download counts (Download icon + tabular-nums); download cards show per-platform asset download chips when stats.source === "github" (hidden gracefully on fallback).
+   356→
+   357→Work Log — Styling detail pass:
+   358→- globals.css: global :focus-visible ring (ember 2px, offset 3px) for consistent a11y focus; .card-hover-glow utility (lift + ember border + soft glow); light-theme contrast bumps (muted-foreground 0.5→0.455, border/input 0.9→0.885).
+   359→- section-heading: index hairline upgraded to ember gradient; hero primary CTA: gradient fill + hover lift + stronger shadow; download cards now share card-hover-glow; chart bars brighten on hover; navbar: removed dead `xs:` class.
+   360→
+   361→Work Log — Bugs/incidents:
+   362→- Dev server OOM-killed mid-round (kernel log: next-server killed, 2.3GB RSS; 4GB box with headless Chrome + Turbopack). NOT a code bug. Restarted via the official .zscripts/dev.sh; closed agent-browser between phases to keep RAM headroom. Watch for recurrence if QA sessions stay open long.
+   363→- Chart initially invisible during QA because GitHub was rate-limited → this drove the localStorage last-good design above.
+   364→
+   365→Verification:
+   366→- bun run lint exit 0; tsc clean (via subagent); page 200; all 4 APIs healthy (GET /api/downloads 405 is correct POST-only).
+   367→- Browser QA (desktop 1280/1440 + mobile 390): locale switch EN→ID instant; persisted across reload (localStorage vs-locale); hero/download/changelog/faq/cta/footer/palette all translated; hero **highlight splits correctly for ID word order; Indonesian dates (13 Okt 2026) via date-fns id locale; chart renders 8 bars with counts (aria-label "Unduhan per rilis — 152 unduhan"); palette search "unduh" matches translated items; light + dark themes crafted; mobile menu language row works; subscribe end-to-end in ID ("Kamu sudah terdaftar" + TAMBAH LAGI reset); graceful fallbacks verified live (card counts hidden, cached-note path); zero console/page errors.
+   368→- DB cleaned: QA subscriber removed, download events 0.
+   369→
+   370→Stage Summary:
+   371→- Site is now fully bilingual EN/ID with instant switching + persistence, has a real per-release downloads chart that survives GitHub rate limits via client-side last-good cache, and finer visual detail (focus rings, card glow, contrast, ornaments).
+   372→- NOTE: metadataBase placeholder from R1 still stands (set real deploy domain when known).
+   373→
+   374→Unresolved / next-phase recommendations (priority order):
+   375→1. OOM risk: 4GB box; avoid keeping browser sessions open across long idle periods; consider `NODE_OPTIONS=--max-old-space-size` if recurrences.
+   376→2. Optional: GITHUB_TOKEN env for higher rate limits (would make live data the norm); per-platform download breakdown chart; Discord community wall; testimonial wall.
+   377→3. Accessibility: next pass could cover prefers-reduced-motion for marquee/scan-line/chart animations.
+   378→
+   379→---
+   380→Task ID: R4-a
+   381→Agent: full-stack-developer
+   382→Task: GitHub Contributors "community" section (backend + hook + section + wiring)
+   383→
+   384→Work Log:
+   385→- Read worklog.md (API contract + R2/R3 conventions: fail-safe github.ts
+   386→  cache pattern, t()-based i18n, Reveal/SectionHeading/card-hover-glow usage).
+   387→- src/lib/github.ts: exported the module-private `ghFetch<T>()` (behavior
+   388→  identical — same headers, Bearer token when GITHUB_TOKEN set, 8s timeout,
+   389→  no-store); added raw `GhContributor` interface + exported `Contributor` /
+   390→  `ContributorsResult` types; added `contributors` cache key to CACHE_KEYS;
+   391→  new `getContributors()` following the exact 10-min-TTL module cache pattern:
+   392→  GET /contributors?per_page=12, maps login/avatar_url(→profile .png
+   393→  fallback)/html_url/contributions, skips entries without login+html_url,
+   394→  totalCommits = Σ listed contributions. ANY failure (rate limit/network/
+   395→  parse/204-empty-body) → `{ contributors: [], totalCommits: 0,
+   396→  source: "fallback" }`, never throws. Non-positive results ARE cached like
+   397→  the other functions (10-min TTL bounds the fallback window).
+   398→- src/app/api/contributors/route.ts (NEW): mirrors stats/changelog route
+   399→  style (`runtime = "nodejs"`, `dynamic = "force-dynamic"`), GET returns
+   400→  NextResponse.json(getContributors()).
+   401→- src/hooks/use-site-data.ts: added `FALLBACK_CONTRIBUTORS: ContributorsResult`
+   402→  + `useContributors()` mirroring useStats() (queryKey ["contributors"],
+   403→  refetchInterval 300_000, returns `contributorsData = query.data ??
+   404→  FALLBACK_CONTRIBUTORS`). Type imported from @/lib/github (single source of
+   405→  truth for the contract).
+   406→- next.config.ts: added images.remotePatterns for
+   407→  https://avatars.githubusercontent.com.
+   408→- src/components/site/contributors.tsx (NEW): section#community, plain
+   409→  background (sits between changelog bg-surface/30 and plain-bg faq —
+   410→  rhythm matches). SectionHeading index="06" with contributors.* keys.
+   411→  Live branch: grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3/4,
+   412→  per-card Reveal delay={i*0.04}; card = <a> rounded-lg border bg-card p-4
+   413→  card-hover-glow, next/image avatar 56px unoptimized rounded-full
+   414→  ring-1 ring-foreground/10, font-mono login + tabular-nums contributions
+   415→  chip text. Footer row: people/commitsTotal mono chips (matches download.tsx
+   416→  chip style) + "View all contributors" ArrowUpRight link (matches changelog
+   417→  viewRelease link style) → graphs/contributors. Fallback branch
+   418→  (source==="fallback" OR empty): Reveal-wrapped CTA card (rounded-lg border
+   419→  bg-card/50 p-8 text-center) with ember Users icon square, fallbackTitle/
+   420→  fallbackBody, primary Button "Become a contributor" (GitFork icon → /fork)
+   421→  + outline Button "View all contributors" (→ graphs/contributors), mono
+   422→  readmeHint line. SSR renders the CTA until live data hydrates in.
+   423→- src/app/page.tsx: <Contributors /> between <Changelog /> and <Faq />.
+   424→- i18n.ts NOT touched: all 12 keys (contributors.* ×11 + a11y.contributors)
+   425→  already existed in BOTH en/id dicts; verified at runtime in SSR HTML.
+   426→- A11y: grid container aria-label={t("a11y.contributors")}, avatar alt
+   427→  `@{login} avatar`, external links rel="noopener noreferrer", next/image
+   428→  lazy by default; whole card is one 44px+ touch target on mobile.
+   429→
+   430→Verification:
+   431→- bun x tsc --noEmit → 0 errors in src/ (only the 4 pre-existing errors in
+   432→  examples/ + skills/, outside the app graph).
+   433→- bun run lint → exit 0.
+   434→- curl /api/contributors → HTTP 200 `{"contributors":[],"totalCommits":0,
+   435→  "source":"fallback"}` — direct GitHub check from this machine returned 403
+   436→  (rate-limited, recurring condition per R2/R3), so fail-safe path verified
+   437→  live and working. Live path is the same ghFetch pipeline as 4 working
+   438→  functions.
+   439→- curl / → 200; SSR HTML contains id="community", fallbackTitle, both
+   440→  fallback buttons and readmeHint (correct branch for the current rate-limit
+   441→  window). dev.log: ✓ Compiled in 255ms, GET /api/contributors 200, no
+   442→  errors/warnings.
+   443→
+   444→Stage Summary:
+   445→- Site gained a community section honoring contributors, with live
+   446→  contributor grid when GitHub is reachable and a never-broken fork CTA when
+   447→  rate-limited. API contract: GET /api/contributors →
+   448→  { contributors: [{ login, avatarUrl, profileUrl, contributions }],
+   449→  totalCommits, source: "github"|"fallback" }.
+   450→- Files touched: src/lib/github.ts (ghFetch exported + getContributors),
+   451→  src/app/api/contributors/route.ts (new), src/hooks/use-site-data.ts,
+   452→  src/components/site/contributors.tsx (new), next.config.ts (remotePatterns),
+   453→  src/app/page.tsx.
+   454→- Deviation from spec (minor): useContributors() exposes the fallback via
+   455→  `contributorsData` (mirroring `stats` in useStats) instead of merging raw
+   456→  query fields — same semantics, consistent naming with the existing hook.
+   457→  Also added avatar_url→github.com/{login}.png fallback mapping and skipped
+   458→  malformed entries for robustness; added GitFork icon on the primary CTA
+   459→  button for visual consistency with cta.tsx buttons.
+   460→- Unresolved: once a GITHUB_TOKEN env is set (R2/R3 recommendation), the grid
+   461→  will be the norm rather than the CTA; remotePatterns added so avatar
+   462→  optimization can be enabled later by dropping `unoptimized`.
+   463→---
+   464→Task ID: R4 (cron review round 4)
+   465→Agent: orchestrator (Z.ai Code)
+   466→Task: Status assessment, browser QA + bug fixes, contributors section, platform download split, reduced-motion audit, styling detail pass
+   467→
+   468→Work Log — Assessment & QA (agent-browser):
+   469→- Baseline healthy at round start: lint exit 0, page 200, all 4 APIs healthy (stats/changelog/subscribe 200, GET /api/downloads 405 = correct POST-only).
+   470→- Full-page screenshot sweep + scrolled viewport screenshots (desktop 1280) + mobile 390 + light theme + ID locale. Zero console/page errors throughout.
+   471→- BUG FOUND (fixed): desktop navbar links wrapped at 1280px — "How it works" broke onto 3 lines after R3 added the LocaleSwitcher. Fixed by tightening the container (gap-6→gap-4/sm:gap-5), nav-link px-3→px-2.5 + whitespace-nowrap, search chip w-44→w-40. Verified on real screenshots.
+   472→- BUG FOUND (fixed): changelog timeline rendered a dangling "— " when a fallback release has publishedAt=null (formatDate returns "—"). Date span now renders only when publishedAt exists.
+   473→- BUG FOUND (fixed, latent tsc error): useChangelog() never returned the `stale` flag that DownloadsChart destructured — surfaced as TS2339 on the query-result union. Hook now returns `stale: query.data?.stale ?? false`. tsc src errors 0 after fix.
+   474→- PlatformSplit correctly renders nothing while GitHub is rate-limited (source=fallback) — verified via aria-label probe; verified WITH data by mocking /api/stats through `agent-browser network route` (81% Windows / 15% macOS / 4% Linux stacked bar + legend + total chip all correct); mocks unrouted after.
+   475→- Contributors live-grid branch verified the same way with a mocked /api/contributors (4 cards, avatars, "4 contributors · 267 commits" chips); fallback CTA branch verified live (GitHub 403). Mocks unrouted; DB still clean (0 subscribers / 0 download events).
+   476→
+   477→Work Log — Features:
+   478→- Platform download split (download.tsx): `PlatformSplit` — stacked horizontal bar per-platform asset downloads for the latest release, ember/neutral/emerald segments, framer-motion scaleX reveal (reduced-motion aware), dl legend with counts + %, role=img + a11y.downloadSplit label. Renders only with live GitHub data and non-zero total.
+   479→- Contributors/community section (delegated, Task R4-a, full-stack-developer — see its entry above): GET /api/contributors (ghFetch exported, 10-min cache, fail-safe fallback), useContributors hook, contributors.tsx (#community, SectionHeading index 06, live avatar grid w/ card-hover-glow + staggered Reveal, fallback CTA card with Become-a-contributor → /fork), next.config remotePatterns for avatars.githubusercontent.com, wired between Changelog and Faq. FAQ heading index bumped 06→07.
+   480→- i18n: 15 new keys added to BOTH dicts (download.splitTitle/splitHint/splitTotal, contributors.* ×11, a11y.contributors, a11y.downloadSplit) — `const id: typeof en` parity holds, tsc clean.
+   481→- Reduced-motion audit COMPLETE: Reveal + CountUp + chart bars + split bar all respect useReducedMotion; globals.css @media block now kills looping animations (marquee, scan-line, pulse-dot) and smooth-scroll under prefers-reduced-motion.
+   482→- GITHUB_TOKEN support confirmed already present in github.ts (R2) — env var is the lever for making live data the norm on this box.
+   483→
+   484→Work Log — Styling details:
+   485→- New `.bg-hatch` utility (45° engineering hatch, foreground @3%) applied to the stats strip with a fade-out mask — subtle texture, no contrast loss.
+   486→- Navbar spacing rhythm tightened (see bug fix); community section reuses card-hover-glow + mono chip language for cohesion.
+   487→
+   488→Verification:
+   489→- bun run lint exit 0; tsc --noEmit → 0 errors in src/; page 200; /api/contributors 200 (fallback shape verified live); all other APIs still healthy; browser QA desktop 1280 + mobile 390, dark + light, EN + ID — zero console errors; mobile menu (search row, language row, links) works; DB clean.
+   490→
+   491→Stage Summary:
+   492→- Site gained a real community signal (contributors grid w/ graceful CTA fallback), an honest per-platform download split, full prefers-reduced-motion coverage, and three bug fixes (navbar wrap, changelog dash, stale-flag type hole).
+   493→- metadataBase placeholder still stands (set real deploy domain when known).
+   494→
+   495→Unresolved / next-phase recommendations (priority order):
+   496→1. OOM discipline: keep agent-browser sessions short (browser closed at round end; RAM 1.8GB/4GB in use).
+   497→2. Set GITHUB_TOKEN env to make live GitHub data the norm (rate limits hit every QA round this time).
+   498→3. Optional features: per-platform breakdown over TIME (multi-release stacked chart), Discord community wall, screenshot gallery of the real app, sitemap/robots.ts + OG image route.
+   499→4. Accessibility next pass: visible skip-to-content link; audit color contrast of muted text in light theme.
+   500→---
+   501→Task ID: R5 (cron review round 5)
+   502→Agent: orchestrator (Z.ai Code)
+   503→Task: Status assessment, browser QA, SEO pack (sitemap/robots/manifest), per-platform stacked downloads chart, skip-link a11y, styling detail pass
+   504→
+   505→Work Log — Assessment & QA:
+   506→- Baseline healthy at round start (lint 0, page 200, APIs 200). GitHub was LIVE this round (not rate-limited) — real release data available for verification.
+   507→- og.png (1200×630) verified visually — already on-brand; kept static, no dynamic OG route needed.
+   508→- No new bugs found this round; one design flaw caught during verification (below).
+   509→
+   510→Work Log — Features:
+   511→- SEO pack: src/lib/site.ts (SITE_URL single source of truth — replaces the layout's inline placeholder), src/app/robots.ts (User-Agent * allow / + sitemap ref), src/app/sitemap.ts (weekly, priority 1), src/app/manifest.ts (standalone PWA manifest, dark theme color #101012, icon.png any + app-icon.png maskable). Removed public/robots.txt (conflicted with the app route); metadataBase now imports SITE_URL.
+   512→- Per-platform stacked chart over time: github.ts ChangelogRelease gained `platforms {windows,macos,linux}` computed via the existing classifyAsset() (installers only — .rbxmx/.zip/checksums excluded); use-site-data.ts type mirrored; downloads-chart.tsx now stacks ember/neutral/emerald segments bottom→top inside each bar with a WINDOWS/MACOS/LINUX legend and a "stacked by platform" subtitle suffix (new i18n key changelog.byPlatform in EN+ID); falls back to the single ember-gradient bar when any release lacks the breakdown.
+   513→- DESIGN FLAW FOUND & FIXED during live-data QA: bar height encodes ALL-asset downloads but segments encoded installer counts → bars rendered mostly empty (e.g. v2.5.0: 53 total but 10 installer downloads). Fix: segments now show the RELATIVE installer share (share/installerSum) so bars always fill; counts above bars remain all-asset totals, consistent with timeline chips; comment in code documents the metric distinction.
+   514→- Accessibility: skip-to-content link as first focusable element (static bilingual "Skip to content · Lompat ke konten" — server-component-safe), main#main tabIndex=-1 target; verified on real focus (first Tab shows ember button top-left).
+   515→
+   516→Work Log — Styling details:
+   517→- Changelog timeline: latest node gets a soft ember halo; other nodes brighten border on row hover (group/li).
+   518→- Contrast bumps: chart zero-labels /50→/65, PlatformSplit % text /60→/75.
+   519→
+   520→Verification:
+   521→- bun run lint exit 0; tsc --noEmit 0 src errors (fixed one TS2459 during development: Platform type must import from use-site-data, not use-platform).
+   522→- All routes 200: /, /robots.txt (now app-generated with sitemap ref), /sitemap.xml, /manifest.webmanifest (+ auto <link rel="manifest"> in HTML), 3 APIs.
+   523→- Browser QA (desktop 1280 + mobile 390, dark): stacked chart verified against LIVE GitHub data — per-bar DOM dump (barPct 11/19/60/21/66/100/0/9 with 100%-fill segments), zero-stub for v3.0.1, legend correct, mobile layout clean; skip link verified; zero console errors; DB clean (0 subscribers / 0 download events).
+   524→
+   525→Stage Summary:
+   526→- Site is now indexable (robots/sitemap/manifest), charts show WHERE downloads come from over time, and keyboard users get a visible skip link. Live GitHub data (no token needed this round) validated the stacked chart end-to-end.
+   527→- NOTE: SITE_URL in src/lib/site.ts is still the placeholder — set the real deploy domain there (single place) at launch.
+   528→
+   529→Unresolved / next-phase recommendations (priority order):
+   530→1. Set real deploy domain in src/lib/site.ts when known (metadataBase + robots + sitemap all follow).
+   531→2. GITHUB_TOKEN env still recommended (rate-limit windows return without it).
+   532→3. Optional: Discord wall (needs server ID for the widget API), screenshot gallery, JSON feed of releases, "compare versions" tool.
+   533→4. A11y next: audit tab order through the command palette (focus trap), prefers-contrast media query.
+   534→---
+   535→Task ID: R6 (cron review round 6)
+   536→Agent: orchestrator (Z.ai Code)
+   537→Task: Status assessment, command-palette keyboard audit + focus-restore fix, RSS release feed, on-brand 404/error pages, styling detail pass
+   538→
+   539→Work Log — Assessment & QA:
+   540→- Baseline healthy (lint 0, page 200, APIs 200). GitHub rate-limited again during QA — fallback paths exercised live.
+   541→- Command-palette keyboard audit (R5 recommendation): ⌘K opens; arrows move selection; Enter navigates + closes + scrolls; Tab stays trapped inside dialog (Radix FocusScope); Escape closes reliably (first-round "failure" was a mount race, not a bug).
+   542→- A11y BUG FOUND & FIXED: after Escape, focus fell to <body> instead of the opening trigger (palette opens via custom event → Radix has no trigger to restore). Fix: palette records document.activeElement on every open path (⌘K toggle + OPEN_COMMAND_EVENT); CommandDialog wrapper (ui/command.tsx) extended with a `contentProps` pass-through to DialogContent; palette passes onCloseAutoFocus → preventDefault + focus the recorded trigger. Two earlier attempts failed and are documented for posterity: (1) instant restore in the [open] effect ran while focus was still inside the dialog; (2) setTimeout(0) ran before Radix's exit animation unmounted the dialog. onCloseAutoFocus fires exactly after the close animation — correct timing. Verified: Escape → focus back on "Open command palette (Ctrl K)" button.
+   543→
+   544→Work Log — Features:
+   545→- RSS feed at /feed.xml (src/app/feed.xml/route.ts): RSS 2.0 channel of the latest releases (title/link/guid/pubDate RFC-822/description), Content-Type application/rss+xml, 10-min client cache header, X-Robots-Tag noindex. Falls back to the shared FALLBACK_RELEASES when GitHub is unreachable (verified live — GitHub was 403 during QA). FALLBACK_RELEASES moved from api/changelog/route.ts into src/lib/github.ts so /api/changelog and /feed.xml share one fallback source.
+   546→- RSS autodiscovery: layout metadata alternates.types["application/rss+xml"] = /feed.xml (verified <link rel="alternate"> in head).
+   547→- Footer: "RSS feed" link with ember Rss icon in Resources (i18n keys footer.linkRss EN "RSS feed" / ID "Feed RSS"; internal link = same-tab, external links keep _blank).
+   548→- On-brand error surfaces: not-found.tsx (ghost 404 over the hero's blueprint grid, bilingual static copy, ember CTA "Back to home · Ke halaman utama" + Latest release + GitHub), error.tsx (client boundary: bug icon, bilingual copy, Try again/Report-a-bug, digest chip), global-error.tsx (standalone html/body with inline styles + Reload button, since globals.css may not load). 404 verified in browser on /this-page-does-not-exist.
+   549→
+   550→Work Log — Styling details:
+   551→- 404/error pages reuse the site's design language (bg-grid + radial mask, mono uppercase eyebrows, display font, corner-ghost numerals) so even failures feel shipped.
+   552→- Footer RSS icon tinted primary/70 to sit quietly among text links.
+   553→
+   554→Verification:
+   555→- bun run lint exit 0; tsc --noEmit 0 src errors (fixed TS2774 in footer by wrapping the icon check in Boolean()).
+   556→- /feed.xml 200 with correct content type; /api/changelog still 200 (fallback path); /, /robots.txt, /sitemap.xml, /manifest.webmanifest all healthy.
+   557→- Browser QA: palette focus-restore verified (BUTTON after Escape), 404 page screenshotted (on-brand), footer RSS link present, zero console errors; DB clean (0 subscribers / 0 download events).
+   558→
+   559→Stage Summary:
+   560→- Palette now returns keyboard focus to its trigger; releases are consumable via RSS with autodiscovery; 404/error states are designed rather than default. Fallback data unified in one export.
+   561→- SITE_URL placeholder still stands (src/lib/site.ts) — og:URL and feed autodiscovery follow it automatically at deploy.
+   562→
+   563→Unresolved / next-phase recommendations (priority order):
+   564→1. Set real deploy domain in src/lib/site.ts at launch.
+   565→2. GITHUB_TOKEN env (rate-limited 2 of the last 3 QA rounds).
+   566→3. Optional: JSON Feed variant (/feed.json), "copy release link" per changelog entry, Discord wall, prefers-contrast pass.
+   567→4. A11y: aria-live announcements for locale switch; visible focus for palette items already native to cmdk.
+   568→

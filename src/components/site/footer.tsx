@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Github, MessageCircle, Radio, Rss } from "lucide-react";
+import { Braces, Github, MessageCircle, Radio, Rss } from "lucide-react";
 import { DISCORD_URL, REPO_URL, RELEASES_URL, useStats } from "@/hooks/use-site-data";
 import { useLocale } from "@/hooks/use-locale";
 import { formatDate } from "@/lib/i18n";
@@ -19,6 +19,7 @@ const RESOURCE_LINKS = [
   },
   { href: DISCORD_URL, labelKey: "footer.linkDiscord" },
   { href: "/feed.xml", labelKey: "footer.linkRss", icon: Rss },
+  { href: "/feed.json", labelKey: "footer.linkJson", icon: Braces },
 ] as const;
 
 const SITE_LINKS = [

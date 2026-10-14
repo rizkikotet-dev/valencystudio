@@ -39,6 +39,7 @@ const en = {
   "a11y.stayUpdated": "Stay updated",
   "a11y.subscribeForm": "Subscribe for updates",
   "a11y.backToTop": "Back to top",
+  "a11y.copyReleaseLink": "Copy release link",
   "a11y.toggleNode": "Toggle {name}",
 
   /* Hero */
@@ -170,6 +171,9 @@ const en = {
     "Pulled live from GitHub releases. The Studio plugin ships inside every desktop release, so one download always matches one plugin version.",
   "changelog.latest": "Latest",
   "changelog.viewRelease": "View release",
+  "changelog.copyLink": "Copy link",
+  "changelog.linkCopied": "Release link copied to clipboard",
+  "changelog.copyFailed": "Couldn't copy the link",
   "changelog.chartTitle": "Downloads by release",
   "changelog.chartSubtitle":
     "All-time asset downloads across the last 8 releases",
@@ -254,6 +258,7 @@ const en = {
   "footer.linkFeature": "Request a feature",
   "footer.linkDiscord": "Discord community",
   "footer.linkRss": "RSS feed",
+  "footer.linkJson": "JSON feed",
   "footer.explore": "Explore",
   "footer.liveFromApi": "Live from GitHub API",
   "footer.cachedData": "Serving cached data — refreshes automatically",
@@ -349,6 +354,7 @@ const id: typeof en = {
   "a11y.stayUpdated": "Dapatkan info terbaru",
   "a11y.subscribeForm": "Berlangganan pembaruan",
   "a11y.backToTop": "Kembali ke atas",
+  "a11y.copyReleaseLink": "Salin tautan rilis",
   "a11y.toggleNode": "Buka/tutup {name}",
 
   /* Hero */
@@ -481,6 +487,9 @@ const id: typeof en = {
     "Diambil langsung dari rilis GitHub. Plugin Studio disertakan di setiap rilis desktop, jadi satu unduhan selalu cocok dengan satu versi plugin.",
   "changelog.latest": "Terbaru",
   "changelog.viewRelease": "Lihat rilis",
+  "changelog.copyLink": "Salin tautan",
+  "changelog.linkCopied": "Tautan rilis disalin ke papan klip",
+  "changelog.copyFailed": "Tautan gagal disalin",
   "changelog.chartTitle": "Unduhan per rilis",
   "changelog.chartSubtitle": "Total unduhan aset di 8 rilis terakhir",
   "changelog.downloadsUnit": "unduhan",
@@ -565,6 +574,7 @@ const id: typeof en = {
   "footer.linkFeature": "Usulkan fitur",
   "footer.linkDiscord": "Komunitas Discord",
   "footer.linkRss": "Feed RSS",
+  "footer.linkJson": "Feed JSON",
   "footer.explore": "Jelajahi",
   "footer.liveFromApi": "Langsung dari API GitHub",
   "footer.cachedData": "Menyajikan data cache — diperbarui otomatis",

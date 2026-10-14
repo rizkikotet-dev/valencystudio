@@ -303,3 +303,22 @@
     animation-play-state: auto;
   }
 }
+
+/*
+ * prefers-contrast: more — raise the floor for secondary text and hairlines.
+ * Darkening/brightening the base variables lifts every text-muted-foreground
+ * usage in both themes, and opacity-mixed utilities (e.g. /70) inherit the
+ * stronger base as well.
+ */
+@media (prefers-contrast: more) {
+  :root {
+    --muted-foreground: oklch(0.33 0.014 60);
+    --border: oklch(0.76 0.008 70);
+    --input: oklch(0.76 0.008 70);
+  }
+  .dark {
+    --muted-foreground: oklch(0.87 0.005 75);
+    --border: oklch(0.98 0 0 / 26%);
+    --input: oklch(0.98 0 0 / 32%);
+  }
+}

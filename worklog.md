@@ -565,3 +565,37 @@ Unresolved / next-phase recommendations (priority order):
 2. GITHUB_TOKEN env (rate-limited 2 of the last 3 QA rounds).
 3. Optional: JSON Feed variant (/feed.json), "copy release link" per changelog entry, Discord wall, prefers-contrast pass.
 4. A11y: aria-live announcements for locale switch; visible focus for palette items already native to cmdk.
+---
+Task ID: R7 (cron review round 7)
+Agent: orchestrator (Z.ai Code)
+Task: Status assessment, browser QA, JSON Feed (/feed.json), per-release copy-link, locale-switch a11y announcements, prefers-contrast pass, styling detail pass
+
+Work Log — Assessment & QA:
+- Baseline healthy at round start (lint 0, all 8 routes 200). GitHub rate-limited again during QA — fallback paths exercised live (changelog served 4 FALLBACK_RELEASES; chart, copy buttons, feeds all behaved on fallback data).
+- No page bugs found this round. One lint finding during development (below).
+
+Work Log — Features:
+- JSON Feed 1.1 at /feed.json (src/app/feed.json/route.ts): machine-readable sibling of /feed.xml, same fetchReleases/FALLBACK_RELEASES semantics, Content-Type application/feed+json, Cache-Control 600, X-Robots-Tag noindex. Verified against live-shaped data (valid 1.1 structure: version/home_page_url/feed_url/items with id+url+title+content_text+date_published).
+- Feed discoverability: layout alternates gained type "application/feed+json" → /feed.json (verified <link rel="alternate"> in head, resolved against metadataBase); footer Resources gained "JSON feed" (Braces icon, ember-tinted, i18n footer.linkJson EN/ID) beside "RSS feed".
+- Copy release link per changelog entry: CopyLinkButton in changelog.tsx — actions row is now "View release ↗ · Copy link" (Link2 icon). Clipboard write with graceful legacy fallback (hidden textarea + execCommand) for non-secure contexts; success → Check icon + text-primary for 1.6s + sonner toast; failure → toast.error. New i18n keys (EN+ID): changelog.copyLink/linkCopied/copyFailed, a11y.copyReleaseLink.
+- Locale-switch announcements (R6 a11y rec): LocaleAnnouncer in providers.tsx — sr-only role="status" aria-live="polite" region; announces in the language switched TO ("Language switched to English" / "Bahasa diubah ke Bahasa Indonesia"), silent on first mount (no announcement for the restored locale), auto-clears after 4s so repeat switches re-announce.
+
+Work Log — Styling details:
+- prefers-contrast: more pass (R6 a11y rec): globals.css media block bumps --muted-foreground (light 0.455→0.33 oklch, dark 0.68→0.87) and solidifies --border/--input in both themes — lifts every text-muted-foreground usage and opacity-mixed utilities without touching component code.
+- Changelog actions row: view-release + copy-link unified into one flex row with a muted "·" separator; consistent 11px mono sizing; copy button hover translates the icon up 1px (matching the view-release arrow micro-motion).
+
+Verification:
+- bun run lint exit 0 (fixed react-hooks/set-state-in-effect on the announcer: announcement now set inside requestAnimationFrame — also better live-region timing — and auto-clear moved to a message-keyed effect); tsc --noEmit 0 src errors.
+- All 9 routes 200: /, /robots.txt, /sitemap.xml, /manifest.webmanifest, /feed.xml, /feed.json, 3 APIs.
+- Browser QA (desktop 1280 dark, EN+ID; mobile 390 ID): zero console errors; copy button success path verified with a trusted click (toast "Release link copied to clipboard", button switches to Check + text-primary); error path verified via synthetic click (clipboard rejects → toast.error); announcer verified live for both locales (text appears, clears after 4s); footer shows RSS + JSON feed with matching icons; mobile ID footer reads "Feed JSON". Browser closed after QA (RAM 2.4GB/4GB in use).
+- DB clean (0 subscribers / 0 download events).
+
+Stage Summary:
+- Releases are now consumable in three formats (RSS, JSON Feed, HTML changelog), every release can be copied to the clipboard with feedback, and both R6 a11y recommendations (locale announcements, prefers-contrast) are implemented. Site remains fully bilingual and hydration-safe.
+- NOTE: SITE_URL placeholder still stands (src/lib/site.ts) — feed_url/alternates follow it automatically at deploy.
+
+Unresolved / next-phase recommendations (priority order):
+1. Set real deploy domain in src/lib/site.ts at launch (metadataBase + robots + sitemap + both feed_url values follow).
+2. GITHUB_TOKEN env (rate-limited in 3 of the last 4 QA rounds; fallback covers it but live data is better for charts).
+3. Optional: Discord wall (needs server ID), screenshot gallery of the real app, "compare versions" tool, sitemap lastmod from release dates.
+4. A11y: prefers-contrast has no automation hook — do one manual check with OS high-contrast enabled; audit chart zero-label contrast under the new variables.
