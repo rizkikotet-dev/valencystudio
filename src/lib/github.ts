@@ -59,6 +59,20 @@ export interface LastCommitInfo {
   message: string;
 }
 
+export interface Contributor {
+  login: string;
+  avatarUrl: string;
+  profileUrl: string;
+  contributions: number;
+}
+
+export interface ContributorsResult {
+  contributors: Contributor[];
+  /** Sum of the contributions of every listed contributor. */
+  totalCommits: number;
+  source: DataSource;
+}
+
 /** Raw GitHub API shapes (only the fields we consume). */
 interface GhRepo {
   stargazers_count?: number;
@@ -92,6 +106,13 @@ interface GhCommit {
     author?: { date?: string };
     message?: string;
   };
+}
+
+interface GhContributor {
+  login?: string;
+  avatar_url?: string;
+  html_url?: string;
+  contributions?: number;
 }
 
 /* ------------------------------------------------------------------ */
@@ -172,13 +193,14 @@ const CACHE_KEYS = {
   releases: "releases",
   totalDownloads: "total-downloads",
   lastCommit: "last-commit",
+  contributors: "contributors",
 } as const;
 
 /* ------------------------------------------------------------------ */
 /* Low-level fetch helper                                              */
 /* ------------------------------------------------------------------ */
 
-async function ghFetch<T>(path: string): Promise<T> {
+export async function ghFetch<T>(path: string): Promise<T> {
   const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
     // GitHub requires a User-Agent on all API requests.
@@ -399,5 +421,42 @@ export async function fetchLatestCommit(): Promise<LastCommitInfo | null> {
     return info;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Top 12 contributors by commit count. Fail-safe: on any failure (rate
+ * limit, network, parse) it returns an empty list — the UI renders a
+ * join-the-community CTA instead of the grid.
+ */
+export async function getContributors(): Promise<ContributorsResult> {
+  const cached = getCached<ContributorsResult>(CACHE_KEYS.contributors);
+  if (cached) return cached;
+
+  try {
+    const data = await ghFetch<GhContributor[]>(
+      "/contributors?per_page=12"
+    );
+    const list = Array.isArray(data) ? data : [];
+    const contributors: Contributor[] = [];
+    for (const entry of list) {
+      if (!entry.login || !entry.html_url) continue;
+      contributors.push({
+        login: entry.login,
+        avatarUrl: entry.avatar_url ?? `https://github.com/${entry.login}.png`,
+        profileUrl: entry.html_url,
+        contributions:
+          typeof entry.contributions === "number" ? entry.contributions : 0,
+      });
+    }
+    const result: ContributorsResult = {
+      contributors,
+      totalCommits: contributors.reduce((sum, c) => sum + c.contributions, 0),
+      source: "github",
+    };
+    setCached(CACHE_KEYS.contributors, result);
+    return result;
+  } catch {
+    return { contributors: [], totalCommits: 0, source: "fallback" };
   }
 }

@@ -35,6 +35,7 @@ const en = {
   "a11y.supportedAssetTypes": "Supported asset types",
   "a11y.copyBuildCommands": "Copy build commands",
   "a11y.transparencyNote": "Build transparency note",
+  "a11y.downloadSplit": "Downloads per platform, latest release",
   "a11y.stayUpdated": "Stay updated",
   "a11y.subscribeForm": "Subscribe for updates",
   "a11y.backToTop": "Back to top",
@@ -159,6 +160,9 @@ const en = {
   "download.compileFromSource": "Compile from source",
   "download.allReleases": "All releases",
   "download.assetDownloads": "{count} downloads",
+  "download.splitTitle": "Download split",
+  "download.splitHint": "Per-platform asset downloads for {tag}",
+  "download.splitTotal": "{count} total downloads",
 
   /* Changelog */
   "changelog.title": "Release history",
@@ -171,6 +175,22 @@ const en = {
     "All-time asset downloads across the last 8 releases",
   "changelog.downloadsUnit": "downloads",
   "changelog.cachedNote": "last synced data — refreshes automatically",
+
+  /* Contributors / community */
+  "contributors.eyebrow": "Community",
+  "contributors.title": "Built in the open",
+  "contributors.description":
+    "ValencyStudio — Spoofer is GPL-3.0 and developed in public. These are the people behind the commits — code, docs, and bug reports all count.",
+  "contributors.contributions": "{count} contributions",
+  "contributors.commitsTotal": "{count} commits",
+  "contributors.people": "{count} contributors",
+  "contributors.viewAll": "View all contributors",
+  "contributors.becomeOne": "Become a contributor",
+  "contributors.fallbackTitle": "Shaped by its community",
+  "contributors.fallbackBody":
+    "Contributor data is unavailable right now — the repository, issues, and discussions are always open. Start with a bug report or a docs patch.",
+  "contributors.readmeHint": "See CONTRIBUTING in the repo for the full guide",
+  "a11y.contributors": "Contributor list",
 
   /* FAQ */
   "faq.title": "Questions, answered honestly",
@@ -323,6 +343,7 @@ const id: typeof en = {
   "a11y.supportedAssetTypes": "Jenis aset yang didukung",
   "a11y.copyBuildCommands": "Salin perintah build",
   "a11y.transparencyNote": "Catatan transparansi build",
+  "a11y.downloadSplit": "Unduhan per platform, rilis terbaru",
   "a11y.stayUpdated": "Dapatkan info terbaru",
   "a11y.subscribeForm": "Berlangganan pembaruan",
   "a11y.backToTop": "Kembali ke atas",
@@ -448,6 +469,9 @@ const id: typeof en = {
   "download.compileFromSource": "Kompilasi dari source",
   "download.allReleases": "Semua rilis",
   "download.assetDownloads": "{count} unduhan",
+  "download.splitTitle": "Distribusi unduhan",
+  "download.splitHint": "Unduhan aset per platform untuk {tag}",
+  "download.splitTotal": "total {count} unduhan",
 
   /* Changelog */
   "changelog.title": "Riwayat rilis",
@@ -459,6 +483,22 @@ const id: typeof en = {
   "changelog.chartSubtitle": "Total unduhan aset di 8 rilis terakhir",
   "changelog.downloadsUnit": "unduhan",
   "changelog.cachedNote": "data tersinkron terakhir — diperbarui otomatis",
+
+  /* Kontributor / komunitas */
+  "contributors.eyebrow": "Komunitas",
+  "contributors.title": "Dibangun secara terbuka",
+  "contributors.description":
+    "ValencyStudio — Spoofer berlisensi GPL-3.0 dan dikembangkan secara publik. Inilah orang-orang di balik setiap commit — kode, dokumentasi, dan laporan bug sama-sama berarti.",
+  "contributors.contributions": "{count} kontribusi",
+  "contributors.commitsTotal": "{count} commit",
+  "contributors.people": "{count} kontributor",
+  "contributors.viewAll": "Lihat semua kontributor",
+  "contributors.becomeOne": "Jadi kontributor",
+  "contributors.fallbackTitle": "Dibentuk oleh komunitasnya",
+  "contributors.fallbackBody":
+    "Data kontributor sedang tidak tersedia — repositori, issue, dan diskusi selalu terbuka. Mulai dari laporan bug atau perbaikan dokumentasi.",
+  "contributors.readmeHint": "Lihat CONTRIBUTING di repositori untuk panduan lengkap",
+  "a11y.contributors": "Daftar kontributor",
 
   /* FAQ */
   "faq.title": "Pertanyaan, dijawab dengan jujur",

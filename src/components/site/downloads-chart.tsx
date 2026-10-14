@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useChangelog } from "@/hooks/use-site-data";
 import { useLocale } from "@/hooks/use-locale";
 import { formatNumber } from "@/lib/i18n";
@@ -13,6 +13,7 @@ import { formatNumber } from "@/lib/i18n";
 export function DownloadsChart() {
   const { releases, stale } = useChangelog();
   const { locale, t } = useLocale();
+  const reduceMotion = useReducedMotion();
 
   const data = [...releases].reverse(); // oldest first
   const max = Math.max(...data.map((r) => r.downloads), 0);
@@ -63,7 +64,7 @@ export function DownloadsChart() {
                   <div className="h-[3px] w-full rounded-t-sm bg-border/70" />
                 ) : (
                   <motion.div
-                    initial={{ height: "0%" }}
+                    initial={reduceMotion ? false : { height: "0%" }}
                     whileInView={{ height: `${pct}%` }}
                     viewport={{ once: true, margin: "-60px" }}
                     transition={{ duration: 0.7, delay: i * 0.06, ease: [0.16, 1, 0.3, 1] }}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import type { ContributorsResult } from "@/lib/github";
 
 /* ------------------------------------------------------------------ */
 /* Types (mirror the API contract — see worklog.md)                    */
@@ -128,6 +129,12 @@ export const FALLBACK_CHANGELOG: ChangelogResponse = {
   source: "fallback",
 };
 
+export const FALLBACK_CONTRIBUTORS: ContributorsResult = {
+  contributors: [],
+  totalCommits: 0,
+  source: "fallback",
+};
+
 /* ------------------------------------------------------------------ */
 /* Query hooks                                                         */
 /* ------------------------------------------------------------------ */
@@ -147,13 +154,26 @@ export function useStats() {
   return { ...query, stats: query.data ?? FALLBACK_STATS };
 }
 
+export function useContributors() {
+  const query = useQuery<ContributorsResult>({
+    queryKey: ["contributors"],
+    queryFn: () => fetchJson<ContributorsResult>("/api/contributors"),
+    refetchInterval: 300_000,
+  });
+  return { ...query, contributorsData: query.data ?? FALLBACK_CONTRIBUTORS };
+}
+
 export function useChangelog() {
   const query = useQuery<ChangelogResponse>({
     queryKey: ["changelog"],
     queryFn: fetchChangelog,
     refetchInterval: 120_000,
   });
-  return { ...query, releases: query.data?.releases ?? FALLBACK_CHANGELOG.releases };
+  return {
+    ...query,
+    releases: query.data?.releases ?? FALLBACK_CHANGELOG.releases,
+    stale: query.data?.stale ?? false,
+  };
 }
 
 /*

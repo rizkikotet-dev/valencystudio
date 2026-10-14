@@ -121,7 +121,7 @@ export function Navbar() {
             : "bg-transparent border-transparent"
         )}
       >
-      <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4 sm:px-6">
+      <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 sm:gap-5 px-4 sm:px-6">
         {/* Brand */}
         <a href="#top" className="flex items-center gap-2.5 shrink-0 group">
           <Image
@@ -147,7 +147,7 @@ export function Navbar() {
             <a
               key={link.href}
               href={link.href}
-              className="relative rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground hover:bg-accent after:absolute after:inset-x-3 after:bottom-1 after:h-px after:origin-left after:scale-x-0 after:bg-primary/70 after:transition-transform after:duration-300 hover:after:scale-x-100"
+              className="relative whitespace-nowrap rounded-md px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground hover:bg-accent after:absolute after:inset-x-2.5 after:bottom-1 after:h-px after:origin-left after:scale-x-0 after:bg-primary/70 after:transition-transform after:duration-300 hover:after:scale-x-100"
             >
               {t(link.labelKey)}
             </a>
@@ -159,7 +159,7 @@ export function Navbar() {
           type="button"
           onClick={openPalette}
           aria-label={t("a11y.openPalette")}
-          className="hidden xl:flex h-9 items-center gap-2 rounded-md border bg-card/50 px-3 text-sm text-muted-foreground transition-colors hover:text-foreground hover:bg-accent hover:border-primary/30 w-44"
+          className="hidden xl:flex h-9 items-center gap-2 rounded-md border bg-card/50 px-3 text-sm text-muted-foreground transition-colors hover:text-foreground hover:bg-accent hover:border-primary/30 w-40"
         >
           <Search className="size-3.5" />
           <span className="text-[13px]">{t("nav.search")}</span>

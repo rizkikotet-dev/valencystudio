@@ -190,6 +190,14 @@
   .hairline-t {
     box-shadow: inset 0 1px 0 0 color-mix(in oklab, var(--foreground) 7%, transparent);
   }
+  /* Diagonal engineering hatch — subtle texture for wide strips */
+  .bg-hatch {
+    background-image: repeating-linear-gradient(
+      -45deg,
+      color-mix(in oklab, var(--foreground) 3%, transparent) 0 1px,
+      transparent 1px 10px
+    );
+  }
   .text-balance {
     text-wrap: balance;
   }
@@ -274,5 +282,24 @@
   100% {
     top: calc(100% - 2px);
     opacity: 0;
+  }
+}
+
+/*
+ * Reduced-motion: stop every looping decorative animation and instant-scroll
+ * anchors. One-shot entrance reveals are handled per-component via
+ * framer-motion's useReducedMotion (Reveal, CountUp, chart bars).
+ */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .animate-marquee,
+  .animate-scan-line,
+  .animate-pulse-dot {
+    animation: none !important;
+  }
+  .marquee-hover-pause:hover > .animate-marquee {
+    animation-play-state: auto;
   }
 }

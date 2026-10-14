@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { animate } from "framer-motion";
+import { animate, useReducedMotion } from "framer-motion";
 import { formatDistanceToNowStrict } from "date-fns";
 import { enUS, id as dateFnsId } from "date-fns/locale";
 import { useStats } from "@/hooks/use-site-data";
@@ -12,10 +12,17 @@ import { cn } from "@/lib/utils";
 function CountUp({ value, locale }: { value: number; locale: Locale }) {
   const ref = useRef<HTMLSpanElement>(null);
   const prev = useRef(0);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
+    // Respect prefers-reduced-motion: paint the final value directly.
+    if (reduceMotion) {
+      node.textContent = formatNumber(value, locale);
+      prev.current = value;
+      return;
+    }
     const controls = animate(prev.current, value, {
       duration: 0.9,
       ease: "easeOut",
@@ -25,7 +32,7 @@ function CountUp({ value, locale }: { value: number; locale: Locale }) {
     });
     prev.current = value;
     return () => controls.stop();
-  }, [value, locale]);
+  }, [value, locale, reduceMotion]);
 
   return <span ref={ref} className="tabular-nums">{formatNumber(value, locale)}</span>;
 }
@@ -79,7 +86,9 @@ export function StatsStrip() {
 
   return (
     <section aria-label={t("a11y.projectStats")} className="relative border-y bg-surface/40">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+      {/* Subtle engineering hatch — fades toward the bottom */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-hatch opacity-60 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
+      <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 divide-y sm:divide-y-0 lg:divide-x divide-border border-x">
           <Cell label={t("stats.latestRelease")} sub={releaseDate} live={stats.source === "github"}>
             <span className="font-mono text-xl sm:text-2xl">{stats.release.tag}</span>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   Apple,
   AppWindow,
@@ -96,6 +97,103 @@ const PLATFORM_ICONS: Record<Platform, React.ComponentType<{ className?: string 
   macos: Apple,
   linux: Terminal,
 };
+
+/* Bar segment colors per platform — ember, neutral, green (matches site accents) */
+const PLATFORM_BAR: Record<Platform, string> = {
+  windows: "bg-primary",
+  macos: "bg-foreground/40",
+  linux: "bg-emerald-500/80",
+};
+
+const PLATFORM_DOT: Record<Platform, string> = {
+  windows: "bg-primary",
+  macos: "bg-foreground/50",
+  linux: "bg-emerald-500",
+};
+
+/**
+ * Stacked per-platform download split for the latest release.
+ * Renders only with live GitHub data and a non-zero total — never guesses.
+ */
+function PlatformSplit() {
+  const { stats } = useStats();
+  const { locale, t } = useLocale();
+  const reduceMotion = useReducedMotion();
+
+  if (stats.source !== "github") return null;
+
+  const rows = (Object.keys(PLATFORM_META) as Platform[]).map((p) => ({
+    platform: p,
+    label: PLATFORM_META[p].label,
+    downloads: stats.release.assets.find((a) => a.platform === p)?.downloads ?? 0,
+  }));
+  const total = rows.reduce((sum, r) => sum + r.downloads, 0);
+  if (total <= 0) return null;
+
+  return (
+    <Reveal delay={0.06} className="mt-6">
+      <div className="rounded-lg border bg-card/50 p-5 sm:p-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <div>
+            <h3 className="font-display text-sm font-semibold tracking-tight">
+              {t("download.splitTitle")}
+            </h3>
+            <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+              {t("download.splitHint", { tag: stats.release.tag })}
+            </p>
+          </div>
+          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+            {t("download.splitTotal", { count: formatNumber(total, locale) })}
+          </p>
+        </div>
+
+        <div
+          role="img"
+          aria-label={t("a11y.downloadSplit")}
+          className="mt-5"
+        >
+          <div className="flex h-3 w-full gap-px overflow-hidden rounded-full bg-surface">
+            {rows.map((r) => {
+              const pct = (r.downloads / total) * 100;
+              if (pct <= 0) return null;
+              return (
+                <motion.div
+                  key={r.platform}
+                  initial={reduceMotion ? false : { scaleX: 0 }}
+                  whileInView={{ scaleX: 1 }}
+                  viewport={{ once: true, margin: "-40px" }}
+                  transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                  className={cn("h-full origin-left", PLATFORM_BAR[r.platform])}
+                  style={{ width: `${pct}%` }}
+                />
+              );
+            })}
+          </div>
+
+          <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
+            {rows.map((r) => (
+              <div key={r.platform} className="flex items-center gap-2">
+                <span
+                  aria-hidden
+                  className={cn("size-2 rounded-full", PLATFORM_DOT[r.platform])}
+                />
+                <dt className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                  {r.label}
+                </dt>
+                <dd className="font-mono text-[11px] tabular-nums text-foreground/90">
+                  {formatNumber(r.downloads, locale)}
+                  <span className="ml-1 text-muted-foreground/60">
+                    {Math.round((r.downloads / total) * 100)}%
+                  </span>
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </div>
+    </Reveal>
+  );
+}
 
 function DownloadCard({
   platform,
@@ -223,6 +321,8 @@ export function DownloadSection() {
             ))}
           </div>
         </Reveal>
+
+        <PlatformSplit />
 
         {/* Transparency note — straight from the README */}
         <Reveal delay={0.1} className="mt-6">

@@ -7,6 +7,7 @@ import { Comparison } from "@/components/site/comparison";
 import { AssetTypes } from "@/components/site/asset-types";
 import { DownloadSection } from "@/components/site/download";
 import { Changelog } from "@/components/site/changelog";
+import { Contributors } from "@/components/site/contributors";
 import { Faq } from "@/components/site/faq";
 import { Cta } from "@/components/site/cta";
 import { Footer } from "@/components/site/footer";
@@ -51,6 +52,7 @@ export default function Home() {
         <AssetTypes />
         <DownloadSection />
         <Changelog />
+        <Contributors />
         <Faq />
         <Cta />
       </main>

@@ -63,9 +63,11 @@ export function Changelog() {
                             {t("changelog.latest")}
                           </span>
                         ) : null}
-                        <span className="font-mono text-[11px] text-muted-foreground">
-                          {formatDate(release.publishedAt, locale)}
-                        </span>
+                        {release.publishedAt ? (
+                          <span className="font-mono text-[11px] text-muted-foreground">
+                            {formatDate(release.publishedAt, locale)}
+                          </span>
+                        ) : null}
                         {release.downloads > 0 ? (
                           <span className="inline-flex items-center gap-1 font-mono text-[11px] tabular-nums text-muted-foreground/80">
                             <Download className="size-3" aria-hidden />

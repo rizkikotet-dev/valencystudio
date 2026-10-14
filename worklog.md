@@ -375,3 +375,125 @@ Unresolved / next-phase recommendations (priority order):
 1. OOM risk: 4GB box; avoid keeping browser sessions open across long idle periods; consider `NODE_OPTIONS=--max-old-space-size` if recurrences.
 2. Optional: GITHUB_TOKEN env for higher rate limits (would make live data the norm); per-platform download breakdown chart; Discord community wall; testimonial wall.
 3. Accessibility: next pass could cover prefers-reduced-motion for marquee/scan-line/chart animations.
+
+---
+Task ID: R4-a
+Agent: full-stack-developer
+Task: GitHub Contributors "community" section (backend + hook + section + wiring)
+
+Work Log:
+- Read worklog.md (API contract + R2/R3 conventions: fail-safe github.ts
+  cache pattern, t()-based i18n, Reveal/SectionHeading/card-hover-glow usage).
+- src/lib/github.ts: exported the module-private `ghFetch<T>()` (behavior
+  identical — same headers, Bearer token when GITHUB_TOKEN set, 8s timeout,
+  no-store); added raw `GhContributor` interface + exported `Contributor` /
+  `ContributorsResult` types; added `contributors` cache key to CACHE_KEYS;
+  new `getContributors()` following the exact 10-min-TTL module cache pattern:
+  GET /contributors?per_page=12, maps login/avatar_url(→profile .png
+  fallback)/html_url/contributions, skips entries without login+html_url,
+  totalCommits = Σ listed contributions. ANY failure (rate limit/network/
+  parse/204-empty-body) → `{ contributors: [], totalCommits: 0,
+  source: "fallback" }`, never throws. Non-positive results ARE cached like
+  the other functions (10-min TTL bounds the fallback window).
+- src/app/api/contributors/route.ts (NEW): mirrors stats/changelog route
+  style (`runtime = "nodejs"`, `dynamic = "force-dynamic"`), GET returns
+  NextResponse.json(getContributors()).
+- src/hooks/use-site-data.ts: added `FALLBACK_CONTRIBUTORS: ContributorsResult`
+  + `useContributors()` mirroring useStats() (queryKey ["contributors"],
+  refetchInterval 300_000, returns `contributorsData = query.data ??
+  FALLBACK_CONTRIBUTORS`). Type imported from @/lib/github (single source of
+  truth for the contract).
+- next.config.ts: added images.remotePatterns for
+  https://avatars.githubusercontent.com.
+- src/components/site/contributors.tsx (NEW): section#community, plain
+  background (sits between changelog bg-surface/30 and plain-bg faq —
+  rhythm matches). SectionHeading index="06" with contributors.* keys.
+  Live branch: grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3/4,
+  per-card Reveal delay={i*0.04}; card = <a> rounded-lg border bg-card p-4
+  card-hover-glow, next/image avatar 56px unoptimized rounded-full
+  ring-1 ring-foreground/10, font-mono login + tabular-nums contributions
+  chip text. Footer row: people/commitsTotal mono chips (matches download.tsx
+  chip style) + "View all contributors" ArrowUpRight link (matches changelog
+  viewRelease link style) → graphs/contributors. Fallback branch
+  (source==="fallback" OR empty): Reveal-wrapped CTA card (rounded-lg border
+  bg-card/50 p-8 text-center) with ember Users icon square, fallbackTitle/
+  fallbackBody, primary Button "Become a contributor" (GitFork icon → /fork)
+  + outline Button "View all contributors" (→ graphs/contributors), mono
+  readmeHint line. SSR renders the CTA until live data hydrates in.
+- src/app/page.tsx: <Contributors /> between <Changelog /> and <Faq />.
+- i18n.ts NOT touched: all 12 keys (contributors.* ×11 + a11y.contributors)
+  already existed in BOTH en/id dicts; verified at runtime in SSR HTML.
+- A11y: grid container aria-label={t("a11y.contributors")}, avatar alt
+  `@{login} avatar`, external links rel="noopener noreferrer", next/image
+  lazy by default; whole card is one 44px+ touch target on mobile.
+
+Verification:
+- bun x tsc --noEmit → 0 errors in src/ (only the 4 pre-existing errors in
+  examples/ + skills/, outside the app graph).
+- bun run lint → exit 0.
+- curl /api/contributors → HTTP 200 `{"contributors":[],"totalCommits":0,
+  "source":"fallback"}` — direct GitHub check from this machine returned 403
+  (rate-limited, recurring condition per R2/R3), so fail-safe path verified
+  live and working. Live path is the same ghFetch pipeline as 4 working
+  functions.
+- curl / → 200; SSR HTML contains id="community", fallbackTitle, both
+  fallback buttons and readmeHint (correct branch for the current rate-limit
+  window). dev.log: ✓ Compiled in 255ms, GET /api/contributors 200, no
+  errors/warnings.
+
+Stage Summary:
+- Site gained a community section honoring contributors, with live
+  contributor grid when GitHub is reachable and a never-broken fork CTA when
+  rate-limited. API contract: GET /api/contributors →
+  { contributors: [{ login, avatarUrl, profileUrl, contributions }],
+  totalCommits, source: "github"|"fallback" }.
+- Files touched: src/lib/github.ts (ghFetch exported + getContributors),
+  src/app/api/contributors/route.ts (new), src/hooks/use-site-data.ts,
+  src/components/site/contributors.tsx (new), next.config.ts (remotePatterns),
+  src/app/page.tsx.
+- Deviation from spec (minor): useContributors() exposes the fallback via
+  `contributorsData` (mirroring `stats` in useStats) instead of merging raw
+  query fields — same semantics, consistent naming with the existing hook.
+  Also added avatar_url→github.com/{login}.png fallback mapping and skipped
+  malformed entries for robustness; added GitFork icon on the primary CTA
+  button for visual consistency with cta.tsx buttons.
+- Unresolved: once a GITHUB_TOKEN env is set (R2/R3 recommendation), the grid
+  will be the norm rather than the CTA; remotePatterns added so avatar
+  optimization can be enabled later by dropping `unoptimized`.
+---
+Task ID: R4 (cron review round 4)
+Agent: orchestrator (Z.ai Code)
+Task: Status assessment, browser QA + bug fixes, contributors section, platform download split, reduced-motion audit, styling detail pass
+
+Work Log — Assessment & QA (agent-browser):
+- Baseline healthy at round start: lint exit 0, page 200, all 4 APIs healthy (stats/changelog/subscribe 200, GET /api/downloads 405 = correct POST-only).
+- Full-page screenshot sweep + scrolled viewport screenshots (desktop 1280) + mobile 390 + light theme + ID locale. Zero console/page errors throughout.
+- BUG FOUND (fixed): desktop navbar links wrapped at 1280px — "How it works" broke onto 3 lines after R3 added the LocaleSwitcher. Fixed by tightening the container (gap-6→gap-4/sm:gap-5), nav-link px-3→px-2.5 + whitespace-nowrap, search chip w-44→w-40. Verified on real screenshots.
+- BUG FOUND (fixed): changelog timeline rendered a dangling "— " when a fallback release has publishedAt=null (formatDate returns "—"). Date span now renders only when publishedAt exists.
+- BUG FOUND (fixed, latent tsc error): useChangelog() never returned the `stale` flag that DownloadsChart destructured — surfaced as TS2339 on the query-result union. Hook now returns `stale: query.data?.stale ?? false`. tsc src errors 0 after fix.
+- PlatformSplit correctly renders nothing while GitHub is rate-limited (source=fallback) — verified via aria-label probe; verified WITH data by mocking /api/stats through `agent-browser network route` (81% Windows / 15% macOS / 4% Linux stacked bar + legend + total chip all correct); mocks unrouted after.
+- Contributors live-grid branch verified the same way with a mocked /api/contributors (4 cards, avatars, "4 contributors · 267 commits" chips); fallback CTA branch verified live (GitHub 403). Mocks unrouted; DB still clean (0 subscribers / 0 download events).
+
+Work Log — Features:
+- Platform download split (download.tsx): `PlatformSplit` — stacked horizontal bar per-platform asset downloads for the latest release, ember/neutral/emerald segments, framer-motion scaleX reveal (reduced-motion aware), dl legend with counts + %, role=img + a11y.downloadSplit label. Renders only with live GitHub data and non-zero total.
+- Contributors/community section (delegated, Task R4-a, full-stack-developer — see its entry above): GET /api/contributors (ghFetch exported, 10-min cache, fail-safe fallback), useContributors hook, contributors.tsx (#community, SectionHeading index 06, live avatar grid w/ card-hover-glow + staggered Reveal, fallback CTA card with Become-a-contributor → /fork), next.config remotePatterns for avatars.githubusercontent.com, wired between Changelog and Faq. FAQ heading index bumped 06→07.
+- i18n: 15 new keys added to BOTH dicts (download.splitTitle/splitHint/splitTotal, contributors.* ×11, a11y.contributors, a11y.downloadSplit) — `const id: typeof en` parity holds, tsc clean.
+- Reduced-motion audit COMPLETE: Reveal + CountUp + chart bars + split bar all respect useReducedMotion; globals.css @media block now kills looping animations (marquee, scan-line, pulse-dot) and smooth-scroll under prefers-reduced-motion.
+- GITHUB_TOKEN support confirmed already present in github.ts (R2) — env var is the lever for making live data the norm on this box.
+
+Work Log — Styling details:
+- New `.bg-hatch` utility (45° engineering hatch, foreground @3%) applied to the stats strip with a fade-out mask — subtle texture, no contrast loss.
+- Navbar spacing rhythm tightened (see bug fix); community section reuses card-hover-glow + mono chip language for cohesion.
+
+Verification:
+- bun run lint exit 0; tsc --noEmit → 0 errors in src/; page 200; /api/contributors 200 (fallback shape verified live); all other APIs still healthy; browser QA desktop 1280 + mobile 390, dark + light, EN + ID — zero console errors; mobile menu (search row, language row, links) works; DB clean.
+
+Stage Summary:
+- Site gained a real community signal (contributors grid w/ graceful CTA fallback), an honest per-platform download split, full prefers-reduced-motion coverage, and three bug fixes (navbar wrap, changelog dash, stale-flag type hole).
+- metadataBase placeholder still stands (set real deploy domain when known).
+
+Unresolved / next-phase recommendations (priority order):
+1. OOM discipline: keep agent-browser sessions short (browser closed at round end; RAM 1.8GB/4GB in use).
+2. Set GITHUB_TOKEN env to make live GitHub data the norm (rate limits hit every QA round this time).
+3. Optional features: per-platform breakdown over TIME (multi-release stacked chart), Discord community wall, screenshot gallery of the real app, sitemap/robots.ts + OG image route.
+4. Accessibility next pass: visible skip-to-content link; audit color contrast of muted text in light theme.

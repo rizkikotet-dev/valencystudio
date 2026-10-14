@@ -97,7 +97,7 @@ export function Faq() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-10 lg:gap-16">
           <SectionHeading
-            index="06"
+            index="07"
             eyebrow={t("nav.faq")}
             title={t("faq.title")}
             description={t("faq.description")}
