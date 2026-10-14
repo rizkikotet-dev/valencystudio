@@ -80,7 +80,7 @@ export function Faq() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-10 lg:gap-16">
           <SectionHeading
-            index="05"
+            index="06"
             eyebrow="FAQ"
             title="Questions, answered honestly"
             description="Straight answers — including the awkward ones about unsigned builds."

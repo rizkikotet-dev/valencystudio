@@ -182,3 +182,35 @@ Work Log:
 
 Stage Summary:
 - Site is fully interactive and browser-verified. Known non-issue: full-page virtual screenshots don't trigger whileInView reveals; real scrolling verified working.
+
+---
+Task ID: R1 (cron review round 1)
+Agent: orchestrator (Z.ai Code)
+Task: Status assessment, QA, new features (command palette, comparison, quickstart, OG image, polish)
+
+Work Log — Assessment:
+- Baseline stable: page 200, all 4 APIs 200, no errors in dev.log, previous QA state intact.
+
+Work Log — New features built:
+- OG share image: hand-crafted og-card.html (brand icon, wordmark, headline, tech chips, meta row) → screenshotted at 1200x630 → public/og.png; wired into openGraph (summary_large_image) + twitter metadata.
+- Command palette (⌘K/Ctrl+K): new command-palette.tsx on shadcn CommandDialog. Groups: Navigate (6 sections), Actions (Download for {detected platform} w/ tracking + GitHub/Discord/bug/feature links), Preferences (theme switch). Global hotkey listener + custom-event trigger; footer kbd hints. Navbar: xl search chip with ⌘K kbd + mobile menu "Search…" item.
+- Comparison section (#comparison, "03 — Comparison"): honest 5-row "Doing it by hand" vs "With ValencyStudio — Spoofer" table, all claims map to real README features.
+- Quickstart terminal block in Download section: 4 numbered build commands (git clone/cd/bun install/bun run tauri:dev) with one-click copy-to-clipboard + toast; terminal stays dark in both themes.
+- Polish: reading-progress hairline (framer-motion useScroll, fixed top); BackToTop button (appears >700px, AnimatePresence); JSON-LD SoftwareApplication schema (version, platforms, GPL license, free offer) in page.tsx; section renumbering 01–06.
+
+Work Log — Bugs found & fixed during QA:
+- navbar.tsx: missing </header> after refactor → JSX parse error → fixed.
+- Command palette search bug: cmdk filters on `value` prop, not visible label — "for linux"/"switch" matched nothing → set value={visible label} on download + theme items; re-verified: "for linux" → Enter opens real release URL in new tab + DownloadEvent recorded.
+- DB cleanup: removed 2 QA download events so launch counters start at 0.
+
+Verification:
+- bun run lint clean; page 200; browser-verified: palette open/filter/navigate/download/theme all work; comparison + quickstart render in dark & light; mobile 390px OK; JSON-LD + og:image meta present; zero console/page errors.
+
+Stage Summary:
+- Site now has: ⌘K command palette, comparison table, build-from-source quickstart, branded OG image, scroll progress, back-to-top, structured data.
+- NOTE for next round: metadataBase is placeholder "https://github.com/valency-studio" — replace with the real deploy domain for absolute OG URLs when known.
+
+Unresolved / next-phase recommendations (priority order):
+1. GitHub rate limits are intermittent → stats/changelog sometimes serve fallback until window resets (handled, self-recovers; could add longer TTL or a proxy token via GITHUB_TOKEN env).
+2. Could add: per-release download-count chart (data still sparse — repo is new), i18n (ID/EN toggle), testimonials/community wall via Discord.
+3. Keep polishing hover/focus micro-interactions on cards and marquee pause-on-hover.

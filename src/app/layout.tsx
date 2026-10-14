@@ -47,13 +47,21 @@ export const metadata: Metadata = {
       "Scan an entire place, preview R6/R15 animations and audio, and replace assets in real time through a companion Studio plugin.",
     siteName: "ValencyStudio — Spoofer",
     type: "website",
-    images: [{ url: "/app-icon.png", width: 512, height: 512, alt: "ValencyStudio — Spoofer" }],
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "ValencyStudio — Spoofer · Every asset in your place, found and replaced in one pass",
+      },
+    ],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "ValencyStudio — Spoofer for Roblox Studio",
     description:
       "Scan an entire place, preview animations and audio, and replace assets in real time.",
+    images: ["/og.png"],
   },
 };
 

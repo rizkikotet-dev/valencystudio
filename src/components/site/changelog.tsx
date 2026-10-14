@@ -21,7 +21,7 @@ export function Changelog() {
     <section id="changelog" className="relative py-20 sm:py-28 border-t bg-surface/30">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <SectionHeading
-          index="04"
+          index="05"
           eyebrow="Changelog"
           title="Release history"
           description="Pulled live from GitHub releases. The Studio plugin ships inside every desktop release, so one download always matches one plugin version."

@@ -5,6 +5,8 @@ import {
   Apple,
   AppWindow,
   ArrowUpRight,
+  Check,
+  Copy,
   Download as DownloadIcon,
   Loader2,
   ShieldAlert,
@@ -23,6 +25,68 @@ import {
 } from "@/hooks/use-site-data";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+
+const BUILD_STEPS = [
+  "git clone https://github.com/valency-studio/valencystudio-spoofer.git",
+  "cd valencystudio-spoofer",
+  "bun install",
+  "bun run tauri:dev",
+];
+
+function Quickstart() {
+  const [copied, setCopied] = useState(false);
+
+  async function copyAll() {
+    const text = BUILD_STEPS.join("\n");
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast.success("Copied to clipboard", {
+        description: "Paste it in your terminal to build from source.",
+      });
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Couldn't access the clipboard.");
+    }
+  }
+
+  return (
+    <div className="overflow-hidden rounded-lg border bg-[oklch(0.13_0.004_65)] shadow-inner">
+      <div className="flex items-center gap-2 border-b border-white/5 bg-white/[0.03] px-4 py-2.5">
+        <span className="flex items-center gap-1.5" aria-hidden>
+          <span className="size-2.5 rounded-full bg-white/10" />
+          <span className="size-2.5 rounded-full bg-white/10" />
+          <span className="size-2.5 rounded-full bg-primary/70" />
+        </span>
+        <span className="ml-1 font-mono text-[11px] text-white/40">
+          build from source — requires Rust + Bun + Node.js 20
+        </span>
+        <button
+          type="button"
+          onClick={copyAll}
+          aria-label="Copy build commands"
+          className="ml-auto flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2.5 py-1 font-mono text-[10px] text-white/60 transition-colors hover:text-white hover:border-primary/40"
+        >
+          {copied ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+      <div className="px-4 py-4 font-mono text-[12px] leading-[1.9]">
+        {BUILD_STEPS.map((step, i) => (
+          <div key={step} className="flex items-baseline gap-3">
+            <span className="select-none text-white/25 tabular-nums">{String(i + 1).padStart(2, "0")}</span>
+            <span className="text-white/85 break-all">
+              <span className="text-primary select-none" aria-hidden>
+                ${" "}
+              </span>
+              {step}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const PLATFORM_ICONS: Record<Platform, React.ComponentType<{ className?: string }>> = {
   windows: AppWindow,
@@ -120,7 +184,7 @@ export function DownloadSection() {
     <section id="download" className="relative py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <SectionHeading
-          index="03"
+          index="04"
           eyebrow="Download"
           title="Get ValencyStudio — Spoofer"
           description="Free and open source under GPL-3.0. Download the latest build for your platform — the Roblox Studio plugin (ValencyStudioSpoofer.rbxmx) is included with every release and syncs itself on first launch."
@@ -179,6 +243,11 @@ export function DownloadSection() {
               </Button>
             </div>
           </aside>
+        </Reveal>
+
+        {/* Build from source */}
+        <Reveal delay={0.14} className="mt-6">
+          <Quickstart />
         </Reveal>
       </div>
     </section>

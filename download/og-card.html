@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, Inter, sans-serif;
+    background: #131315;
+    color: #f2f0ed;
+    position: relative;
+  }
+  .grid-bg {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(to right, rgba(242,240,237,0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(242,240,237,0.05) 1px, transparent 1px);
+    background-size: 44px 44px;
+    -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, black 30%, transparent 100%);
+            mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, black 30%, transparent 100%);
+  }
+  .glow {
+    position: absolute; left: 50%; top: -180px; transform: translateX(-50%);
+    width: 700px; height: 340px; border-radius: 50%;
+    background: rgba(234,88,12,0.16); filter: blur(90px);
+  }
+  .topline {
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(to right, transparent, rgba(234,88,12,0.85), transparent);
+  }
+  .wrap {
+    position: relative; height: 100%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 26px; padding: 0 90px; text-align: center;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 14px;
+  }
+  .brand img { width: 56px; height: 56px; border-radius: 13px; box-shadow: 0 8px 28px rgba(0,0,0,0.5); }
+  .brand-name { font-size: 27px; font-weight: 600; letter-spacing: -0.02em; text-align: left; line-height: 1.15; }
+  .brand-name .tag {
+    display: inline-block; vertical-align: middle; margin-left: 10px;
+    font: 600 10px/1 ui-monospace, "SF Mono", Menlo, monospace;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: #f97316; border: 1px solid rgba(249,115,22,0.45);
+    background: rgba(249,115,22,0.12); border-radius: 4px; padding: 4px 7px;
+  }
+  .brand-sub { display: block; font: 500 11px ui-monospace, Menlo, monospace; letter-spacing: 0.3em; color: rgba(242,240,237,0.45); margin-top: 5px; }
+  h1 { font-size: 64px; font-weight: 640; letter-spacing: -0.03em; line-height: 1.06; max-width: 980px; }
+  h1 .accent { color: #f97316; }
+  .chips { display: flex; gap: 12px; }
+  .chip {
+    font: 500 13px ui-monospace, Menlo, monospace; color: rgba(242,240,237,0.65);
+    border: 1px solid rgba(242,240,237,0.14); background: rgba(242,240,237,0.04);
+    padding: 7px 14px; border-radius: 7px;
+  }
+  .meta {
+    display: flex; align-items: center; gap: 12px;
+    font: 500 13px ui-monospace, Menlo, monospace; letter-spacing: 0.08em;
+    color: rgba(242,240,237,0.5);
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; }
+  .meta b { color: rgba(242,240,237,0.85); font-weight: 600; }
+  .sep { color: rgba(242,240,237,0.2); }
+</style>
+</head>
+<body>
+  <div class="grid-bg"></div>
+  <div class="glow"></div>
+  <div class="topline"></div>
+  <div class="wrap">
+    <div class="brand">
+      <img src="/home/z/my-project/public/app-icon.png" alt="">
+      <div class="brand-name">
+        ValencyStudio <span class="tag">Spoofer</span>
+        <span class="brand-sub">FOR ROBLOX STUDIO</span>
+      </div>
+    </div>
+    <h1>Every asset in your place,<br><span class="accent">found and replaced</span> in one pass.</h1>
+    <div class="chips">
+      <span class="chip">Tauri 2</span>
+      <span class="chip">Rust</span>
+      <span class="chip">React 19</span>
+      <span class="chip">Luau</span>
+    </div>
+    <div class="meta">
+      <span class="dot"></span>
+      <span><b>v3.0.2</b> latest release</span>
+      <span class="sep">|</span>
+      <span>open source · GPL-3.0</span>
+      <span class="sep">|</span>
+      <span>Windows · macOS · Linux</span>
+    </div>
+  </div>
+</body>
+</html>
