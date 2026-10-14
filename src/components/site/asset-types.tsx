@@ -34,7 +34,10 @@ function MarqueeList() {
 
 export function AssetTypes() {
   return (
-    <section aria-label="Supported asset types" className="relative border-y py-8 overflow-hidden bg-background">
+    <section
+      aria-label="Supported asset types"
+      className="marquee-hover-pause relative border-y py-8 overflow-hidden bg-background"
+    >
       <div
         aria-hidden
         className="absolute inset-y-0 left-0 w-24 z-10 bg-gradient-to-r from-background to-transparent"
@@ -43,7 +46,7 @@ export function AssetTypes() {
         aria-hidden
         className="absolute inset-y-0 right-0 w-24 z-10 bg-gradient-to-l from-background to-transparent"
       />
-      <div className="flex w-max animate-marquee motion-reduce:animate-none">
+      <div className="flex w-max animate-marquee motion-reduce:animate-none cursor-default" title="Hover to pause">
         <MarqueeList />
         <MarqueeList />
         <MarqueeList />

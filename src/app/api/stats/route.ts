@@ -1,15 +1,21 @@
 import { NextResponse } from "next/server";
-import { fetchLatestRelease, fetchRepoStats, fetchTotalDownloads } from "@/lib/github";
+import {
+  fetchLatestCommit,
+  fetchLatestRelease,
+  fetchRepoStats,
+  fetchTotalDownloads,
+} from "@/lib/github";
 import { db } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const [repoStats, latestRelease, totalDownloads] = await Promise.all([
+  const [repoStats, latestRelease, totalDownloads, lastCommit] = await Promise.all([
     fetchRepoStats(),
     fetchLatestRelease(),
     fetchTotalDownloads(),
+    fetchLatestCommit(),
   ]);
 
   // Site counters — never let a DB hiccup break the whole payload.
@@ -48,6 +54,9 @@ export async function GET() {
     totals: {
       downloads: totalDownloads,
     },
+    lastCommit: lastCommit
+      ? { sha: lastCommit.sha, date: lastCommit.date, message: lastCommit.message }
+      : null,
     site: {
       downloadClicks,
       subscribers,

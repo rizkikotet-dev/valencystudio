@@ -1,8 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { Github, MessageCircle } from "lucide-react";
-import { DISCORD_URL, REPO_URL, RELEASES_URL } from "@/hooks/use-site-data";
+import { Github, MessageCircle, Radio } from "lucide-react";
+import { DISCORD_URL, REPO_URL, RELEASES_URL, useStats } from "@/hooks/use-site-data";
 
 const RESOURCE_LINKS = [
   { href: REPO_URL, label: "GitHub repository" },
@@ -27,6 +27,15 @@ const SITE_LINKS = [
 ];
 
 export function Footer() {
+  const { stats } = useStats();
+  const releaseDate = stats.release.publishedAt
+    ? new Date(stats.release.publishedAt).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : null;
+
   return (
     <footer className="mt-auto border-t bg-surface/40 pb-[env(safe-area-inset-bottom)]">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-12 sm:py-14">
@@ -121,7 +130,15 @@ export function Footer() {
         </div>
 
         {/* Legal */}
-        <div className="mt-12 flex flex-col gap-3 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-12 flex flex-col gap-3 border-t pt-6">
+          <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] text-muted-foreground/70">
+            <Radio className={"size-3 " + (stats.source === "github" ? "text-emerald-500" : "text-muted-foreground/50")} />
+            <span>
+              {stats.source === "github" ? "Live from GitHub API" : "Serving cached data — refreshes automatically"}
+              {releaseDate ? ` · release ${stats.release.tag} · ${releaseDate}` : ""}
+            </span>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="font-mono text-[11px] text-muted-foreground/80">
             © 2026 valency-studio · GPL-3.0 ·{" "}
             <a
@@ -137,6 +154,7 @@ export function Footer() {
             Not affiliated with or endorsed by Roblox Corporation. “Roblox” and “Roblox Studio”
             are trademarks of Roblox Corporation.
           </p>
+          </div>
         </div>
       </div>
     </footer>

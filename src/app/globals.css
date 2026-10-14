@@ -218,6 +218,10 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+  /* Pause the marquee while the visitor hovers the strip */
+  .marquee-hover-pause:hover > .animate-marquee {
+    animation-play-state: paused;
+  }
 }
 
 @keyframes marquee {

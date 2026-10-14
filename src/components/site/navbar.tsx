@@ -93,7 +93,7 @@ export function Navbar() {
             <a
               key={link.href}
               href={link.href}
-              className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground hover:bg-accent"
+              className="relative rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground hover:bg-accent after:absolute after:inset-x-3 after:bottom-1 after:h-px after:origin-left after:scale-x-0 after:bg-primary/70 after:transition-transform after:duration-300 hover:after:scale-x-100"
             >
               {link.label}
             </a>

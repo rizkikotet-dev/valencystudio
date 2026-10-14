@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Github, Loader2, Mail, MessageCircle } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Github,
+  Link2,
+  Loader2,
+  Mail,
+  MessageCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Reveal } from "@/components/site/reveal";
@@ -12,6 +20,7 @@ export function Cta() {
   const { stats } = useStats();
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [subscribed, setSubscribed] = useState(false);
   const [joinedCount, setJoinedCount] = useState<number | null>(null);
 
   // Derived: prefer the post-subscribe count, fall back to the server stats.
@@ -31,12 +40,24 @@ export function Cta() {
 
     if (result.ok) {
       setJoinedCount(result.subscribers ?? null);
+      setSubscribed(true);
       setEmail("");
       toast.success("You're on the list.", {
         description: "Release notes and plugin updates will land in your inbox.",
       });
     } else {
       toast.error(result.error ?? "Something went wrong. Try again.");
+    }
+  }
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success("Link copied", {
+        description: "Share it with your studio team.",
+      });
+    } catch {
+      toast.error("Couldn't access the clipboard.");
     }
   }
 
@@ -60,33 +81,57 @@ export function Cta() {
                 ValencyStudio — Spoofer. No spam, unsubscribe anytime.
               </p>
 
-              <form
-                onSubmit={handleSubmit}
-                className="mt-2 flex w-full max-w-md flex-col sm:flex-row gap-2.5"
-                aria-label="Subscribe for updates"
-              >
-                <label htmlFor="cta-email" className="sr-only">
-                  Email address
-                </label>
-                <Input
-                  id="cta-email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@studio.dev"
-                  autoComplete="email"
-                  className="h-11 flex-1 bg-background/80"
-                />
-                <Button type="submit" disabled={submitting} className="h-11 gap-2 font-medium">
-                  {submitting ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <ArrowRight className="size-4" />
-                  )}
-                  Subscribe
-                </Button>
-              </form>
+              {subscribed ? (
+                <div
+                  className="mt-2 flex w-full max-w-md items-center gap-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3.5 text-left"
+                  role="status"
+                >
+                  <CheckCircle2 className="size-5 shrink-0 text-emerald-500" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                      You're on the list
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Watch your inbox for release notes and plugin updates.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSubscribed(false)}
+                    className="shrink-0 rounded-md border px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground hover:border-primary/40"
+                  >
+                    Add another
+                  </button>
+                </div>
+              ) : (
+                <form
+                  onSubmit={handleSubmit}
+                  className="mt-2 flex w-full max-w-md flex-col sm:flex-row gap-2.5"
+                  aria-label="Subscribe for updates"
+                >
+                  <label htmlFor="cta-email" className="sr-only">
+                    Email address
+                  </label>
+                  <Input
+                    id="cta-email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@studio.dev"
+                    autoComplete="email"
+                    className="h-11 flex-1 bg-background/80"
+                  />
+                  <Button type="submit" disabled={submitting} className="h-11 gap-2 font-medium">
+                    {submitting ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <ArrowRight className="size-4" />
+                    )}
+                    Subscribe
+                  </Button>
+                </form>
+              )}
 
               <p className="font-mono text-[11px] text-muted-foreground/80" aria-live="polite">
                 {subscriberCount !== null
@@ -106,6 +151,15 @@ export function Cta() {
                     <MessageCircle className="size-4" />
                     Join the Discord
                   </a>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => void copyLink()}
+                >
+                  <Link2 className="size-4" />
+                  Copy link
                 </Button>
               </div>
             </div>

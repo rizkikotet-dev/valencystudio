@@ -214,3 +214,39 @@ Unresolved / next-phase recommendations (priority order):
 1. GitHub rate limits are intermittent → stats/changelog sometimes serve fallback until window resets (handled, self-recovers; could add longer TTL or a proxy token via GITHUB_TOKEN env).
 2. Could add: per-release download-count chart (data still sparse — repo is new), i18n (ID/EN toggle), testimonials/community wall via Discord.
 3. Keep polishing hover/focus micro-interactions on cards and marquee pause-on-hover.
+
+---
+Task ID: R2 (cron review round 2)
+Agent: orchestrator (Z.ai Code)
+Task: Status assessment, QA, live commit data, micro-interactions, CTA share/success, footer freshness
+
+Work Log — Assessment:
+- Baseline stable (page 200, APIs 200, zero errors). Continued with feature + polish round per R1 recommendations.
+
+Work Log — Features:
+- Live commit data: github.ts gained fetchLatestCommit() (GET /commits?per_page=1, 10-min cache, null on failure, negative results never cached); /api/stats now returns lastCommit {sha,date,message}|null; StatsResponse type + fallback updated.
+- StatsStrip: new 5th "Last commit" cell — relative time via date-fns formatDistanceToNowStrict, ember sha7 + "on main" sub with message tooltip; grid now lg:grid-cols-5; graceful "fetching from GitHub…" state during rate limits (verified live — GitHub was 403 during QA and UI degraded gracefully).
+- CTA: inline success panel after subscribing (green "You're on the list" + "Add another" reset); new "Copy link" share button (clipboard + toast) next to Star on GitHub / Join the Discord.
+- Footer: data-freshness line with Radio icon — "Live from GitHub API · release v3.0.2 · <date>" or "Serving cached data — refreshes automatically".
+
+Work Log — Styling/micro-interactions:
+- Marquee pause-on-hover: `.marquee-hover-pause:hover > .animate-marquee` utility in globals.css (Tailwind 4 arbitrary `hover:[animation-play-state:paused]` silently failed to compile — replaced with real CSS rule; verified computed style "paused" on hover).
+- Navbar links: animated ember underline on hover (after: pseudo, origin-left scale-x).
+- Stats cells: hover bg tint.
+- BackToTop moved to bottom-24 to clear the toast stack.
+
+Work Log — Bugs found & fixed:
+- Tailwind arbitrary hover:animation-play-state class not compiling → replaced with globals.css utility (verified in browser).
+- DB cleanup: removed 1 QA subscriber so counters start at 0.
+
+Verification:
+- bun run lint clean; page 200; browser-verified: 5-cell strip renders with graceful fallbacks, subscribe inline success + reset works, copy-link works, marquee pauses on hover, footer freshness line shows cached state, zero console/page errors.
+
+Stage Summary:
+- Site gained live commit signal, honest rate-limit UX, share affordances, and finer micro-interactions.
+- metadataBase placeholder note from R1 still stands (set real domain at deploy).
+
+Unresolved / next-phase recommendations (priority order):
+1. When deploy domain known: update metadataBase in layout.tsx.
+2. Optional: GITHUB_TOKEN env for higher rate limits; per-release download chart once data is non-trivial; i18n ID/EN; Discord community wall.
+3. Continue accessibility pass (focus-visible ring tuning on custom chips/buttons).

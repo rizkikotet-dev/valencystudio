@@ -51,6 +51,12 @@ export interface ReleasesResult {
   source: DataSource;
 }
 
+export interface LastCommitInfo {
+  sha: string;
+  date: string;
+  message: string;
+}
+
 /** Raw GitHub API shapes (only the fields we consume). */
 interface GhRepo {
   stargazers_count?: number;
@@ -75,6 +81,15 @@ interface GhRelease {
   draft?: boolean;
   prerelease?: boolean;
   assets?: GhAsset[];
+}
+
+interface GhCommit {
+  sha?: string;
+  commit?: {
+    committer?: { date?: string };
+    author?: { date?: string };
+    message?: string;
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -154,6 +169,7 @@ const CACHE_KEYS = {
   latestRelease: "latest-release",
   releases: "releases",
   totalDownloads: "total-downloads",
+  lastCommit: "last-commit",
 } as const;
 
 /* ------------------------------------------------------------------ */
@@ -346,6 +362,33 @@ export async function fetchTotalDownloads(): Promise<number | null> {
     );
     setCached(CACHE_KEYS.totalDownloads, total);
     return total;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Most recent commit on the default branch (null on failure — the UI simply
+ * hides the related cell; negative results are never cached).
+ */
+export async function fetchLatestCommit(): Promise<LastCommitInfo | null> {
+  const cached = getCached<LastCommitInfo>(CACHE_KEYS.lastCommit);
+  if (cached) return cached;
+
+  try {
+    const data = await ghFetch<GhCommit[]>("/commits?per_page=1");
+    const commit = Array.isArray(data) ? data[0] : undefined;
+    const sha = commit?.sha;
+    const date = commit?.commit?.committer?.date ?? commit?.commit?.author?.date;
+    if (!sha || !date) return null;
+
+    const info: LastCommitInfo = {
+      sha,
+      date,
+      message: (commit?.commit?.message ?? "").split("\n")[0].slice(0, 80),
+    };
+    setCached(CACHE_KEYS.lastCommit, info);
+    return info;
   } catch {
     return null;
   }

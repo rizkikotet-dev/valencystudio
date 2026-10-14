@@ -25,6 +25,7 @@ export interface StatsResponse {
     assets: ReleaseAsset[];
   };
   totals: { downloads: number | null };
+  lastCommit: { sha: string; date: string; message: string } | null;
   site: { downloadClicks: number; subscribers: number };
   source: "github" | "fallback";
 }
@@ -81,6 +82,7 @@ export const FALLBACK_STATS: StatsResponse = {
     ],
   },
   totals: { downloads: null },
+  lastCommit: null,
   site: { downloadClicks: 0, subscribers: 0 },
   source: "fallback",
 };

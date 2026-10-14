@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { animate } from "framer-motion";
+import { formatDistanceToNowStrict } from "date-fns";
 import { useStats } from "@/hooks/use-site-data";
 import { cn } from "@/lib/utils";
 
@@ -36,7 +37,12 @@ interface CellProps {
 
 function Cell({ label, children, sub, live, className }: CellProps) {
   return (
-    <div className={cn("relative flex flex-col gap-1.5 px-6 py-7 sm:px-8", className)}>
+    <div
+      className={cn(
+        "relative flex flex-col gap-1.5 px-6 py-7 sm:px-8 transition-colors duration-300 hover:bg-accent/40",
+        className
+      )}
+    >
       <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
         {label}
         {live ? (
@@ -61,11 +67,15 @@ export function StatsStrip() {
     : "recent";
 
   const downloads = stats.totals.downloads;
+  const commit = stats.lastCommit;
+  const commitAgo = commit
+    ? formatDistanceToNowStrict(new Date(commit.date), { addSuffix: true })
+    : null;
 
   return (
     <section aria-label="Project stats" className="relative border-y bg-surface/40">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 lg:divide-x divide-border border-x">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 divide-y sm:divide-y-0 lg:divide-x divide-border border-x">
           <Cell label="Latest release" sub={releaseDate} live={stats.source === "github"}>
             <span className="font-mono text-xl sm:text-2xl">{stats.release.tag}</span>
           </Cell>
@@ -76,6 +86,25 @@ export function StatsStrip() {
           >
             {downloads !== null ? (
               <CountUp value={downloads} />
+            ) : (
+              <span className="text-muted-foreground/50">—</span>
+            )}
+          </Cell>
+          <Cell
+            label="Last commit"
+            sub={
+              commit ? (
+                <span className="block truncate" title={commit.message}>
+                  <span className="text-primary">{commit.sha.slice(0, 7)}</span> on main
+                </span>
+              ) : (
+                "fetching from GitHub…"
+              )
+            }
+            live={!!commit}
+          >
+            {commitAgo ? (
+              <span className="font-mono text-lg sm:text-xl">{commitAgo}</span>
             ) : (
               <span className="text-muted-foreground/50">—</span>
             )}
