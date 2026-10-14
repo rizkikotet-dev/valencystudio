@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Github, MessageCircle, Radio } from "lucide-react";
+import { Github, MessageCircle, Radio, Rss } from "lucide-react";
 import { DISCORD_URL, REPO_URL, RELEASES_URL, useStats } from "@/hooks/use-site-data";
 import { useLocale } from "@/hooks/use-locale";
 import { formatDate } from "@/lib/i18n";
@@ -18,6 +18,7 @@ const RESOURCE_LINKS = [
     labelKey: "footer.linkFeature",
   },
   { href: DISCORD_URL, labelKey: "footer.linkDiscord" },
+  { href: "/feed.xml", labelKey: "footer.linkRss", icon: Rss },
 ] as const;
 
 const SITE_LINKS = [
@@ -96,10 +97,13 @@ export function Footer() {
                 <li key={link.labelKey}>
                   <a
                     href={link.href}
-                    target="_blank"
+                    target={"icon" in link && Boolean(link.icon) ? undefined : "_blank"}
                     rel="noopener noreferrer"
-                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
                   >
+                    {"icon" in link && Boolean(link.icon) ? (
+                      <link.icon className="size-3.5 text-primary/70" aria-hidden />
+                    ) : null}
                     {t(link.labelKey)}
                   </a>
                 </li>

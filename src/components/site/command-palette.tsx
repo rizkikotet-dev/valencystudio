@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   Bug,
@@ -55,21 +55,42 @@ export function CommandPalette() {
   const { t } = useLocale();
   const platform = usePlatform();
   const { stats } = useStats();
+  /** Element focused before the palette opened — restored on close (a11y). */
+  const lastTrigger = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setOpen((v) => !v);
+        setOpen((v) => {
+          // Idempotent write; records the focused element when opening so it
+          // can be restored when the palette closes.
+          if (!v) lastTrigger.current = document.activeElement as HTMLElement | null;
+          return !v;
+        });
       }
     };
-    const onOpenEvent = () => setOpen(true);
+    const onOpenEvent = () => {
+      lastTrigger.current = document.activeElement as HTMLElement | null;
+      setOpen(true);
+    };
     document.addEventListener("keydown", onKey);
     window.addEventListener(OPEN_COMMAND_EVENT, onOpenEvent);
     return () => {
       document.removeEventListener("keydown", onKey);
       window.removeEventListener(OPEN_COMMAND_EVENT, onOpenEvent);
     };
+  }, []);
+
+  /** Return focus to the element that opened the palette (a11y). Fired from
+   * DialogContent's onCloseAutoFocus — after the close animation finishes.
+   * The ref is overwritten on every open, so no explicit clearing needed. */
+  const restoreTriggerFocus = useCallback(() => {
+    const trigger = lastTrigger.current;
+    if (trigger && trigger.isConnected) {
+      trigger.focus?.();
+    }
+    lastTrigger.current = null;
   }, []);
 
   const run = useCallback((fn: () => void) => {
@@ -119,6 +140,12 @@ export function CommandPalette() {
       title="ValencyStudio — Spoofer"
       description={t("palette.description")}
       className="sm:max-w-xl"
+      contentProps={{
+        onCloseAutoFocus: (e) => {
+          e.preventDefault();
+          restoreTriggerFocus();
+        },
+      }}
     >
       <CommandInput placeholder={t("palette.placeholder")} />
       <CommandList>

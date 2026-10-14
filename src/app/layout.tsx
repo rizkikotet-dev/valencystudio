@@ -38,6 +38,11 @@ export const metadata: Metadata = {
     "game development tools",
   ],
   authors: [{ name: "valency-studio" }],
+  alternates: {
+    types: {
+      "application/rss+xml": "/feed.xml",
+    },
+  },
   icons: {
     icon: "/icon.png",
     apple: "/icon.png",

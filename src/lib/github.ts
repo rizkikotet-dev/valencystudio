@@ -129,6 +129,46 @@ const REPO = "valencystudio-spoofer";
 const API_BASE = `https://api.github.com/repos/${OWNER}/${REPO}`;
 const RELEASES_PAGE_URL = `https://github.com/${OWNER}/${REPO}/releases`;
 
+/**
+ * Known release list served when GitHub is unreachable (rate limit / network
+ * error). Shared by /api/changelog and /feed.xml so every consumer degrades
+ * to the same data.
+ */
+export const FALLBACK_RELEASES: ChangelogRelease[] = [
+  {
+    tag: "v3.0.2",
+    name: "ValencyStudio - Spoofer v3.0.2",
+    publishedAt: "2026-10-13",
+    url: `${RELEASES_PAGE_URL}/tag/v3.0.2`,
+    notes: "See the release page for the full changelog.",
+    downloads: 0,
+  },
+  {
+    tag: "v3.0.1",
+    name: "ValencyStudio - Spoofer v3.0.1",
+    publishedAt: null,
+    url: `${RELEASES_PAGE_URL}/tag/v3.0.1`,
+    notes: "See the release page for the full changelog.",
+    downloads: 0,
+  },
+  {
+    tag: "v2.5.0",
+    name: "ValencyStudio - Spoofer v2.5.0",
+    publishedAt: null,
+    url: `${RELEASES_PAGE_URL}/tag/v2.5.0`,
+    notes: "See the release page for the full changelog.",
+    downloads: 0,
+  },
+  {
+    tag: "v2.4.0",
+    name: "ValencyStudio - Spoofer v2.4.0",
+    publishedAt: null,
+    url: `${RELEASES_PAGE_URL}/tag/v2.4.0`,
+    notes: "See the release page for the full changelog.",
+    downloads: 0,
+  },
+];
+
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 const REQUEST_TIMEOUT_MS = 8000; // 8 seconds
 const NOTES_MAX_LENGTH = 400;

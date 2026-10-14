@@ -531,3 +531,37 @@ Unresolved / next-phase recommendations (priority order):
 2. GITHUB_TOKEN env still recommended (rate-limit windows return without it).
 3. Optional: Discord wall (needs server ID for the widget API), screenshot gallery, JSON feed of releases, "compare versions" tool.
 4. A11y next: audit tab order through the command palette (focus trap), prefers-contrast media query.
+---
+Task ID: R6 (cron review round 6)
+Agent: orchestrator (Z.ai Code)
+Task: Status assessment, command-palette keyboard audit + focus-restore fix, RSS release feed, on-brand 404/error pages, styling detail pass
+
+Work Log — Assessment & QA:
+- Baseline healthy (lint 0, page 200, APIs 200). GitHub rate-limited again during QA — fallback paths exercised live.
+- Command-palette keyboard audit (R5 recommendation): ⌘K opens; arrows move selection; Enter navigates + closes + scrolls; Tab stays trapped inside dialog (Radix FocusScope); Escape closes reliably (first-round "failure" was a mount race, not a bug).
+- A11y BUG FOUND & FIXED: after Escape, focus fell to <body> instead of the opening trigger (palette opens via custom event → Radix has no trigger to restore). Fix: palette records document.activeElement on every open path (⌘K toggle + OPEN_COMMAND_EVENT); CommandDialog wrapper (ui/command.tsx) extended with a `contentProps` pass-through to DialogContent; palette passes onCloseAutoFocus → preventDefault + focus the recorded trigger. Two earlier attempts failed and are documented for posterity: (1) instant restore in the [open] effect ran while focus was still inside the dialog; (2) setTimeout(0) ran before Radix's exit animation unmounted the dialog. onCloseAutoFocus fires exactly after the close animation — correct timing. Verified: Escape → focus back on "Open command palette (Ctrl K)" button.
+
+Work Log — Features:
+- RSS feed at /feed.xml (src/app/feed.xml/route.ts): RSS 2.0 channel of the latest releases (title/link/guid/pubDate RFC-822/description), Content-Type application/rss+xml, 10-min client cache header, X-Robots-Tag noindex. Falls back to the shared FALLBACK_RELEASES when GitHub is unreachable (verified live — GitHub was 403 during QA). FALLBACK_RELEASES moved from api/changelog/route.ts into src/lib/github.ts so /api/changelog and /feed.xml share one fallback source.
+- RSS autodiscovery: layout metadata alternates.types["application/rss+xml"] = /feed.xml (verified <link rel="alternate"> in head).
+- Footer: "RSS feed" link with ember Rss icon in Resources (i18n keys footer.linkRss EN "RSS feed" / ID "Feed RSS"; internal link = same-tab, external links keep _blank).
+- On-brand error surfaces: not-found.tsx (ghost 404 over the hero's blueprint grid, bilingual static copy, ember CTA "Back to home · Ke halaman utama" + Latest release + GitHub), error.tsx (client boundary: bug icon, bilingual copy, Try again/Report-a-bug, digest chip), global-error.tsx (standalone html/body with inline styles + Reload button, since globals.css may not load). 404 verified in browser on /this-page-does-not-exist.
+
+Work Log — Styling details:
+- 404/error pages reuse the site's design language (bg-grid + radial mask, mono uppercase eyebrows, display font, corner-ghost numerals) so even failures feel shipped.
+- Footer RSS icon tinted primary/70 to sit quietly among text links.
+
+Verification:
+- bun run lint exit 0; tsc --noEmit 0 src errors (fixed TS2774 in footer by wrapping the icon check in Boolean()).
+- /feed.xml 200 with correct content type; /api/changelog still 200 (fallback path); /, /robots.txt, /sitemap.xml, /manifest.webmanifest all healthy.
+- Browser QA: palette focus-restore verified (BUTTON after Escape), 404 page screenshotted (on-brand), footer RSS link present, zero console errors; DB clean (0 subscribers / 0 download events).
+
+Stage Summary:
+- Palette now returns keyboard focus to its trigger; releases are consumable via RSS with autodiscovery; 404/error states are designed rather than default. Fallback data unified in one export.
+- SITE_URL placeholder still stands (src/lib/site.ts) — og:URL and feed autodiscovery follow it automatically at deploy.
+
+Unresolved / next-phase recommendations (priority order):
+1. Set real deploy domain in src/lib/site.ts at launch.
+2. GITHUB_TOKEN env (rate-limited 2 of the last 3 QA rounds).
+3. Optional: JSON Feed variant (/feed.json), "copy release link" per changelog entry, Discord wall, prefers-contrast pass.
+4. A11y: aria-live announcements for locale switch; visible focus for palette items already native to cmdk.
