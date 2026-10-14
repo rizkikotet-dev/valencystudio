@@ -43,14 +43,14 @@ export function Changelog() {
                   </li>
                 ))
               : releases.map((release, i) => (
-                  <li key={release.tag} className="relative flex gap-5 pb-8 pl-8 last:pb-0">
+                  <li key={release.tag} className="group/li relative flex gap-5 pb-8 pl-8 last:pb-0">
                     {/* Node */}
                     <span
                       aria-hidden
                       className={
                         i === 0
-                          ? "absolute left-0 top-1.5 size-[15px] rounded-full border-2 border-primary bg-primary/25"
-                          : "absolute left-0 top-1.5 size-[15px] rounded-full border-2 border-border bg-background"
+                          ? "absolute left-0 top-1.5 size-[15px] rounded-full border-2 border-primary bg-primary/25 shadow-[0_0_0_4px_rgba(234,88,12,0.12)] transition-shadow duration-300"
+                          : "absolute left-0 top-1.5 size-[15px] rounded-full border-2 border-border bg-background transition-colors duration-300 hover:border-primary/60 group-hover/li:border-primary/60"
                       }
                     />
                     <div className="flex-1 min-w-0">

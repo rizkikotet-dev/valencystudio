@@ -182,7 +182,7 @@ function PlatformSplit() {
                 </dt>
                 <dd className="font-mono text-[11px] tabular-nums text-foreground/90">
                   {formatNumber(r.downloads, locale)}
-                  <span className="ml-1 text-muted-foreground/60">
+                  <span className="ml-1 text-muted-foreground/75">
                     {Math.round((r.downloads / total) * 100)}%
                   </span>
                 </dd>

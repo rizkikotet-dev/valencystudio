@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+import { SITE_URL } from "@/lib/site";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -22,7 +23,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://github.com/valency-studio"),
+  metadataBase: new URL(SITE_URL),
   title: "ValencyStudio — Spoofer · Asset replacement for Roblox Studio",
   description:
     "Preview, replace, and push animations, sounds, decals, meshes, and videos across an entire Roblox Studio place — without manually editing a single instance.",

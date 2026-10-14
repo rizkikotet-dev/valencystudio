@@ -497,3 +497,37 @@ Unresolved / next-phase recommendations (priority order):
 2. Set GITHUB_TOKEN env to make live GitHub data the norm (rate limits hit every QA round this time).
 3. Optional features: per-platform breakdown over TIME (multi-release stacked chart), Discord community wall, screenshot gallery of the real app, sitemap/robots.ts + OG image route.
 4. Accessibility next pass: visible skip-to-content link; audit color contrast of muted text in light theme.
+---
+Task ID: R5 (cron review round 5)
+Agent: orchestrator (Z.ai Code)
+Task: Status assessment, browser QA, SEO pack (sitemap/robots/manifest), per-platform stacked downloads chart, skip-link a11y, styling detail pass
+
+Work Log — Assessment & QA:
+- Baseline healthy at round start (lint 0, page 200, APIs 200). GitHub was LIVE this round (not rate-limited) — real release data available for verification.
+- og.png (1200×630) verified visually — already on-brand; kept static, no dynamic OG route needed.
+- No new bugs found this round; one design flaw caught during verification (below).
+
+Work Log — Features:
+- SEO pack: src/lib/site.ts (SITE_URL single source of truth — replaces the layout's inline placeholder), src/app/robots.ts (User-Agent * allow / + sitemap ref), src/app/sitemap.ts (weekly, priority 1), src/app/manifest.ts (standalone PWA manifest, dark theme color #101012, icon.png any + app-icon.png maskable). Removed public/robots.txt (conflicted with the app route); metadataBase now imports SITE_URL.
+- Per-platform stacked chart over time: github.ts ChangelogRelease gained `platforms {windows,macos,linux}` computed via the existing classifyAsset() (installers only — .rbxmx/.zip/checksums excluded); use-site-data.ts type mirrored; downloads-chart.tsx now stacks ember/neutral/emerald segments bottom→top inside each bar with a WINDOWS/MACOS/LINUX legend and a "stacked by platform" subtitle suffix (new i18n key changelog.byPlatform in EN+ID); falls back to the single ember-gradient bar when any release lacks the breakdown.
+- DESIGN FLAW FOUND & FIXED during live-data QA: bar height encodes ALL-asset downloads but segments encoded installer counts → bars rendered mostly empty (e.g. v2.5.0: 53 total but 10 installer downloads). Fix: segments now show the RELATIVE installer share (share/installerSum) so bars always fill; counts above bars remain all-asset totals, consistent with timeline chips; comment in code documents the metric distinction.
+- Accessibility: skip-to-content link as first focusable element (static bilingual "Skip to content · Lompat ke konten" — server-component-safe), main#main tabIndex=-1 target; verified on real focus (first Tab shows ember button top-left).
+
+Work Log — Styling details:
+- Changelog timeline: latest node gets a soft ember halo; other nodes brighten border on row hover (group/li).
+- Contrast bumps: chart zero-labels /50→/65, PlatformSplit % text /60→/75.
+
+Verification:
+- bun run lint exit 0; tsc --noEmit 0 src errors (fixed one TS2459 during development: Platform type must import from use-site-data, not use-platform).
+- All routes 200: /, /robots.txt (now app-generated with sitemap ref), /sitemap.xml, /manifest.webmanifest (+ auto <link rel="manifest"> in HTML), 3 APIs.
+- Browser QA (desktop 1280 + mobile 390, dark): stacked chart verified against LIVE GitHub data — per-bar DOM dump (barPct 11/19/60/21/66/100/0/9 with 100%-fill segments), zero-stub for v3.0.1, legend correct, mobile layout clean; skip link verified; zero console errors; DB clean (0 subscribers / 0 download events).
+
+Stage Summary:
+- Site is now indexable (robots/sitemap/manifest), charts show WHERE downloads come from over time, and keyboard users get a visible skip link. Live GitHub data (no token needed this round) validated the stacked chart end-to-end.
+- NOTE: SITE_URL in src/lib/site.ts is still the placeholder — set the real deploy domain there (single place) at launch.
+
+Unresolved / next-phase recommendations (priority order):
+1. Set real deploy domain in src/lib/site.ts when known (metadataBase + robots + sitemap all follow).
+2. GITHUB_TOKEN env still recommended (rate-limit windows return without it).
+3. Optional: Discord wall (needs server ID for the widget API), screenshot gallery, JSON feed of releases, "compare versions" tool.
+4. A11y next: audit tab order through the command palette (focus trap), prefers-contrast media query.

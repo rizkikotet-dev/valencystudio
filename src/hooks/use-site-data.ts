@@ -38,6 +38,8 @@ export interface ChangelogRelease {
   url: string;
   notes: string;
   downloads: number;
+  /** Per-platform asset breakdown (installers only). Absent on fallback data. */
+  platforms?: { windows: number; macos: number; linux: number };
 }
 
 export interface ChangelogResponse {

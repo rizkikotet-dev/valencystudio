@@ -46,6 +46,11 @@ export interface ChangelogRelease {
   notes: string;
   /** Total download_count across the release's assets (0 for fallback data). */
   downloads: number;
+  /**
+   * Per-platform asset download breakdown (installers only — .rbxmx/.zip/
+   * checksums excluded). Absent for fallback entries and older cached shapes.
+   */
+  platforms?: { windows: number; macos: number; linux: number };
 }
 
 export interface ReleasesResult {
@@ -350,18 +355,24 @@ export async function fetchReleases(): Promise<ReleasesResult> {
     const list = Array.isArray(data) ? data : [];
     const releases: ChangelogRelease[] = list.map((release) => {
       const tag = release.tag_name ?? "";
+      const assets = Array.isArray(release.assets) ? release.assets : [];
+      const platforms = { windows: 0, macos: 0, linux: 0 };
+      let downloads = 0;
+      for (const asset of assets) {
+        const count =
+          typeof asset.download_count === "number" ? asset.download_count : 0;
+        downloads += count;
+        const platform = classifyAsset(asset.name ?? "");
+        if (platform) platforms[platform] += count;
+      }
       return {
         tag,
         name: release.name ?? (tag ? `ValencyStudio - Spoofer ${tag}` : "Release"),
         publishedAt: release.published_at ?? null,
         url: release.html_url ?? `${RELEASES_PAGE_URL}/tag/${tag}`,
         notes: capNotes(stripMarkdownToPlainText(release.body ?? "")),
-        downloads: Array.isArray(release.assets)
-          ? release.assets.reduce(
-              (sum, asset) => sum + (typeof asset.download_count === "number" ? asset.download_count : 0),
-              0,
-            )
-          : 0,
+        downloads,
+        platforms,
       };
     });
     const result: ReleasesResult = { releases, source: "github" };

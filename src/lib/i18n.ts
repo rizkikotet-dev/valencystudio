@@ -174,6 +174,7 @@ const en = {
   "changelog.chartSubtitle":
     "All-time asset downloads across the last 8 releases",
   "changelog.downloadsUnit": "downloads",
+  "changelog.byPlatform": "stacked by platform",
   "changelog.cachedNote": "last synced data — refreshes automatically",
 
   /* Contributors / community */
@@ -482,6 +483,7 @@ const id: typeof en = {
   "changelog.chartTitle": "Unduhan per rilis",
   "changelog.chartSubtitle": "Total unduhan aset di 8 rilis terakhir",
   "changelog.downloadsUnit": "unduhan",
+  "changelog.byPlatform": "bertumpuk per platform",
   "changelog.cachedNote": "data tersinkron terakhir — diperbarui otomatis",
 
   /* Kontributor / komunitas */
